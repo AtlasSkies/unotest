@@ -31,7 +31,7 @@ const fixedCenterPlugin = {
   }
 };
 
-/* === BACKGROUND + SPOKES (for popup only) === */
+/* === BACKGROUND + SPOKES === */
 const radarBackgroundPlugin = {
   id: 'customPentagonBackground',
   beforeDatasetsDraw(chart) {
@@ -96,7 +96,7 @@ const radarBackgroundPlugin = {
   }
 };
 
-/* === OUTLINED AXIS TITLES (5 % farther, 10× lift for Speed & Defense) === */
+/* === OUTLINED AXIS TITLES === */
 const outlinedLabelsPlugin = {
   id: 'outlinedLabels',
   afterDraw(chart) {
@@ -110,8 +110,7 @@ const outlinedLabelsPlugin = {
 
     const speedIndex = 1;
     const defenseIndex = 4;
-    const extendedRadius = r.drawingArea * 1.15; // 🔹 5 % farther
-
+    const extendedRadius = r.drawingArea * 1.15;
     const base = -Math.PI / 2;
 
     ctx.save();
@@ -133,10 +132,9 @@ const outlinedLabelsPlugin = {
       const x = cx + radiusToUse * Math.cos(angle);
       let y = cy + radiusToUse * Math.sin(angle);
 
-      // Large vertical lift
-      if (i === 0) y -= 5; // Power
-      if (isOverlayChart && i === 1) y -= 60; // Speed ↑
-      if (isOverlayChart && i === 4) y -= 40; // Defense ↑
+      if (i === 0) y -= 5;
+      if (isOverlayChart && i === 1) y -= 60;
+      if (isOverlayChart && i === 4) y -= 40;
 
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
@@ -145,7 +143,7 @@ const outlinedLabelsPlugin = {
   }
 };
 
-/* === SHOW NUMBERS BELOW TITLES (Power raised total 20 px) === */
+/* === NUMERIC VALUES === */
 const inputValuePlugin = {
   id: 'inputValuePlugin',
   afterDraw(chart) {
@@ -176,7 +174,6 @@ const inputValuePlugin = {
       const x = cx + (radiusToUse + offset) * Math.cos(angle);
       let y = cy + (radiusToUse + offset) * Math.sin(angle);
 
-      // 🔺Power number raised total 20 px
       if (i === 0) y -= 20;
       if (i === 1) y += 20;
       if (i === 4) y += 20;
@@ -354,18 +351,34 @@ viewBtn.addEventListener('click', () => {
 
 closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
-/* === DOWNLOAD CHARACTER CHART === */
+/* === FIXED DOWNLOAD CHARACTER CHART (FULL CAPTURE) === */
 downloadBtn.addEventListener('click', () => {
   downloadBtn.style.visibility = 'hidden';
   closeBtn.style.visibility = 'hidden';
 
-  html2canvas(document.getElementById('characterBox'), { scale: 2 }).then(canvas => {
+  const characterBox = document.getElementById('characterBox');
+  const originalScroll = characterBox.scrollTop;
+  const originalOverflow = characterBox.style.overflow;
+
+  // Expand full content
+  characterBox.style.overflow = 'visible';
+  characterBox.scrollTop = 0;
+
+  html2canvas(characterBox, {
+    scale: 2,
+    windowWidth: characterBox.scrollWidth,
+    windowHeight: characterBox.scrollHeight,
+    scrollX: 0,
+    scrollY: -window.scrollY,
+  }).then(canvas => {
     const link = document.createElement('a');
     const cleanName = (nameInput.value || 'Unnamed').replace(/\s+/g, '_');
     link.download = `${cleanName}_CharacterChart.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
 
+    characterBox.style.overflow = originalOverflow;
+    characterBox.scrollTop = originalScroll;
     downloadBtn.style.visibility = 'visible';
     closeBtn.style.visibility = 'visible';
   });
