@@ -3,7 +3,7 @@ let radar2Ready = false;
 let chartColor = 'rgb(135, 71, 230)';
 
 const CHART1_CENTER = { x: 247, y: 250 };
-const CHART_SCALE_FACTOR = 1.0; // reset to 1.0 to prevent shrinking
+const CHART_SCALE_FACTOR = 1.0;
 const CHART_SIZE_MULTIPLIER = 1.0;
 
 function hexToRGBA(hex, alpha) {
@@ -25,7 +25,6 @@ const fixedCenterPlugin = {
       r.xCenter = opt.centerX;
       r.yCenter = opt.centerY;
     }
-    // don't multiply drawing area again or chart disappears
   }
 };
 
@@ -92,7 +91,7 @@ const radarBackgroundPlugin = {
   }
 };
 
-/* === OUTLINED LABELS (Speed & Defense Averaged) === */
+/* === OUTLINED LABELS (Speed & Defense slightly lowered) === */
 const outlinedLabelsPlugin = {
   id: 'outlinedLabels',
   afterDraw(chart) {
@@ -121,7 +120,7 @@ const outlinedLabelsPlugin = {
       let y = cy + radiusToUse * Math.sin(angle);
 
       if (i === 0) y -= 5;
-      if (isOverlayChart && (i === 1 || i === 4)) y -= 48; // averaged offset
+      if (isOverlayChart && (i === 1 || i === 4)) y -= 42; // lowered slightly from -48 → -42
 
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
@@ -130,7 +129,7 @@ const outlinedLabelsPlugin = {
   }
 };
 
-/* === NUMERIC LABELS (Speed & Defense Averaged) === */
+/* === NUMERIC LABELS (Speed & Defense slightly lowered) === */
 const inputValuePlugin = {
   id: 'inputValuePlugin',
   afterDraw(chart) {
@@ -158,7 +157,7 @@ const inputValuePlugin = {
 
       if (i === 0) y -= 20;
       if (chart.canvas.id === 'radarChart2') {
-        if (i === 1 || i === 4) y -= 28; // averaged numeric offset
+        if (i === 1 || i === 4) y -= 22; // lowered slightly from -28 → -22
       } else {
         if (i === 1) y += 20;
         if (i === 4) y += 20;
