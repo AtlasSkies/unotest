@@ -6,7 +6,7 @@ let isMulticolor = false;
 const CHART1_CENTER = { x: 247, y: 250 };
 const CHART_SIZE_MULTIPLIER = 1.0;
 
-/* === Utility === */
+/* === UTILS === */
 function hexToRGBA(hex, alpha) {
   if (hex.startsWith('rgb')) return hex.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
   const r = parseInt(hex.slice(1, 3), 16);
@@ -15,14 +15,8 @@ function hexToRGBA(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/* === Smooth Gradient for Multicolor === */
 function mixColors(c1, c2, weight = 0.5) {
-  const toRGB = hex => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b];
-  };
+  const toRGB = hex => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
   const [r1, g1, b1] = toRGB(c1);
   const [r2, g2, b2] = toRGB(c2);
   const r = Math.round(r1 * (1 - weight) + r2 * weight);
@@ -31,28 +25,22 @@ function mixColors(c1, c2, weight = 0.5) {
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
+/* === MULTICOLOR GRADIENT === */
 function createAxisGradient(ctx, chartArea, colors) {
   const cx = (chartArea.left + chartArea.right) / 2;
   const cy = (chartArea.top + chartArea.bottom) / 2;
   const grad = ctx.createConicGradient(-Math.PI / 2, cx, cy);
   const n = colors.length;
   const alpha = 0.65;
-
   colors.forEach((c, i) => {
     const nextColor = colors[(i + 1) % n];
-    const rgbaStart = hexToRGBA(c, alpha);
-    const rgbaMid = hexToRGBA(mixColors(c, nextColor, 0.5), alpha);
-    const rgbaEnd = hexToRGBA(nextColor, alpha);
-    const start = i / n;
-    const end = (i + 1) / n;
-    grad.addColorStop(start, rgbaStart);
-    grad.addColorStop((start + end) / 2, rgbaMid);
-    grad.addColorStop(end, rgbaEnd);
+    grad.addColorStop(i / n, hexToRGBA(c, alpha));
+    grad.addColorStop((i + 0.5) / n, hexToRGBA(mixColors(c, nextColor, 0.5), alpha));
   });
+  grad.addColorStop(1, hexToRGBA(colors[0], alpha));
   return grad;
 }
 
-/* === Axis Colors === */
 function getAxisColors() {
   return [
     axisColors.powerColor.value,
@@ -60,10 +48,10 @@ function getAxisColors() {
     axisColors.trickColor.value,
     axisColors.recoveryColor.value,
     axisColors.defenseColor.value
-  ].map(color => color || chartColor);
+  ].map(c => c || chartColor);
 }
 
-/* === Plugins (unchanged) === */
+/* === PLUGINS === */
 const fixedCenterPlugin = {
   id: 'fixedCenter',
   beforeLayout(chart) {
@@ -77,6 +65,70 @@ const fixedCenterPlugin = {
   }
 };
 
+/* === BACKGROUND (from your example) === */
+const radarBackgroundPlugin = {
+  id: 'customPentagonBackground',
+  beforeDatasetsDraw(chart) {
+    const opts = chart.config.options.customBackground;
+    if (!opts?.enabled) return;
+    const r = chart.scales.r, ctx = chart.ctx;
+    const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
+    const N = chart.data.labels.length, start = -Math.PI / 2;
+
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    gradient.addColorStop(0, '#f8fcff');
+    gradient.addColorStop(0.33, '#92dfec');
+    gradient.addColorStop(1, '#92dfec');
+
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = start + (i * 2 * Math.PI / N);
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    ctx.restore();
+  },
+  afterDatasetsDraw(chart) {
+    const opts = chart.config.options.customBackground;
+    if (!opts?.enabled) return;
+    const r = chart.scales.r, ctx = chart.ctx;
+    const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
+    const N = chart.data.labels.length, start = -Math.PI / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = start + (i * 2 * Math.PI / N);
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = '#35727d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = start + (i * 2 * Math.PI / N);
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#184046';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+/* === LABEL OUTLINES === */
 const outlinedLabelsPlugin = {
   id: 'outlinedLabels',
   afterDraw(chart) {
@@ -96,7 +148,7 @@ const outlinedLabelsPlugin = {
     ctx.lineWidth = 4;
 
     labels.forEach((label, i) => {
-      let angle = base + (i * 2 * Math.PI / labels.length);
+      const angle = base + (i * 2 * Math.PI / labels.length);
       const x = cx + baseRadius * Math.cos(angle);
       const y = cy + baseRadius * Math.sin(angle);
       ctx.strokeText(label, x, y);
@@ -106,7 +158,7 @@ const outlinedLabelsPlugin = {
   }
 };
 
-/* === Chart Builder === */
+/* === BUILD RADAR === */
 function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter = null) {
   return new Chart(ctx, {
     type: 'radar',
@@ -138,8 +190,8 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
       layout: { padding: { top: 25, bottom: 25, left: 10, right: 10 } },
       scales: {
         r: {
-          grid: { color: '#ccc' },
-          angleLines: { color: '#ccc' },
+          grid: { display: false },
+          angleLines: { color: '#6db5c0', lineWidth: 1 },
           suggestedMin: 0,
           suggestedMax: 10,
           ticks: { display: false },
@@ -150,7 +202,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
       fixedCenter: { enabled: !!fixedCenter, centerX: fixedCenter?.x, centerY: fixedCenter?.y },
       plugins: { legend: { display: false } }
     },
-    plugins: [fixedCenterPlugin, outlinedLabelsPlugin]
+    plugins: [fixedCenterPlugin, radarBackgroundPlugin, outlinedLabelsPlugin]
   });
 }
 
@@ -192,7 +244,7 @@ window.addEventListener('load', () => {
   updateCharts();
 });
 
-/* === Update === */
+/* === UPDATE === */
 function updateCharts() {
   const vals = [
     +powerInput.value || 0,
@@ -220,7 +272,7 @@ function updateCharts() {
   }
 }
 
-/* === Multicolor Toggle === */
+/* === MULTICOLOR TOGGLE === */
 multiBtn.addEventListener('click', () => {
   isMulticolor = !isMulticolor;
   multiBtn.textContent = isMulticolor ? 'Single Color' : 'Multicolor';
@@ -229,7 +281,7 @@ multiBtn.addEventListener('click', () => {
   updateCharts();
 });
 
-/* === Listeners === */
+/* === INPUTS === */
 [
   powerInput, speedInput, trickInput, recoveryInput, defenseInput,
   colorPicker, ...Object.values(axisColors)
@@ -238,7 +290,7 @@ multiBtn.addEventListener('click', () => {
   el.addEventListener('change', updateCharts);
 });
 
-/* === Image Upload === */
+/* === IMAGE === */
 imgInput.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -247,7 +299,7 @@ imgInput.addEventListener('change', e => {
   reader.readAsDataURL(file);
 });
 
-/* === View Character Chart === */
+/* === VIEW === */
 viewBtn.addEventListener('click', () => {
   overlay.classList.remove('hidden');
   overlayImg.src = uploadedImg.src;
@@ -277,7 +329,7 @@ viewBtn.addEventListener('click', () => {
 
 closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
-/* === Download Button === */
+/* === DOWNLOAD === */
 downloadBtn.addEventListener('click', () => {
   downloadBtn.style.visibility = 'hidden';
   closeBtn.style.visibility = 'hidden';
