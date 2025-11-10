@@ -237,3 +237,175 @@ const speedInput = document.getElementById('speedInput');
 const trickInput = document.getElementById('trickInput');
 const recoveryInput = document.getElementById('recoveryInput');
 const defenseInput = document.getElementById('defenseInput');
+
+const colorPicker = document.getElementById('colorPicker');
+const multiBtn = document.getElementById('multiBtn');
+const nameInput = document.getElementById('nameInput');
+const abilityInput = document.getElementById('abilityInput');
+const levelInput = document.getElementById('levelInput');
+
+const axisColors = {
+  power: document.getElementById('powerColor'),
+  speed: document.getElementById('speedColor'),
+  trick: document.getElementById('trickColor'),
+  recovery: document.getElementById('recoveryColor'),
+  defense: document.getElementById('defenseColor')
+};
+
+const inputElements = [
+  powerInput, speedInput, trickInput, recoveryInput, defenseInput,
+  colorPicker, ...Object.values(axisColors)
+];
+
+
+/* === INIT === */
+window.addEventListener('load', () => {
+  chartColor = colorPicker.value || chartColor;
+  const ctx1 = document.getElementById('radarChart1').getContext('2d');
+  radar1 = makeRadar(ctx1, true, false, CHART1_CENTER);
+  updateCharts();
+});
+
+/* === UPDATE CHARTS - INCLUDES COLOR SYNC LOGIC === */
+function updateCharts() {
+  const vals = [
+    +powerInput.value || 0,
+    +speedInput.value || 0,
+    +trickInput.value || 0,
+    +recoveryInput.value || 0,
+    +defenseInput.value || 0
+  ];
+  
+  const newChartColor = colorPicker.value || '#92dfec';
+  
+  // 1. Update main chart color state and sync axis colors if in Multicolor mode
+  if (chartColor !== newChartColor) {
+    chartColor = newChartColor;
+    
+    // ONLY update axis colors when in Multicolor mode
+    if (isMulticolor) {
+      Object.values(axisColors).forEach(el => el.value = chartColor);
+    }
+  }
+
+  const maxVal = Math.max(...vals, 10);
+  const cappedVals = vals.map(v => Math.min(v, 10));
+
+  let datasetColors;
+  let fillColor;
+
+  if (isMulticolor) {
+    datasetColors = getAxisColors();
+    // Simple average mix for background fill
+    fillColor = datasetColors.reduce((acc, curr, i) => i === 0 ? curr : mixColors(acc, curr, 1 / (i + 1)), datasetColors[0]);
+  } else {
+    // Monocolor: use the single chartColor for all aspects
+    datasetColors = [chartColor, chartColor, chartColor, chartColor, chartColor];
+    fillColor = chartColor;
+  }
+  
+  // sync ability color to charts options (for outlined labels)
+  if (radar1) radar1.options.abilityColor = chartColor;
+  if (radar2) radar2.options.abilityColor = chartColor;
+
+  // Apply updates to radar1 (Preview Chart)
+  if (radar1) {
+    radar1.options.scales.r.suggestedMax = maxVal;
+    radar1.data.datasets[0].data = vals;
+    radar1.data.datasets[0].borderColor = datasetColors;
+    radar1.data.datasets[0].pointBorderColor = datasetColors;
+    radar1.data.datasets[0].backgroundColor = hexToRGBA(fillColor, 0.65);
+    radar1.update();
+  }
+  
+  // Apply updates to radar2 (Overlay Chart)
+  if (radar2Ready && radar2) {
+    radar2.data.datasets[0].data = cappedVals;
+    radar2.data.datasets[0].borderColor = datasetColors;
+    radar2.data.datasets[0].pointBorderColor = datasetColors;
+    radar2.data.datasets[0].backgroundColor = hexToRGBA(fillColor, 0.65);
+    radar2.update();
+  }
+  
+  // Note: Button text color is now controlled purely by CSS (always black)
+}
+
+/* === MULTICOLOR TOGGLE === */
+multiBtn.addEventListener('click', () => {
+  isMulticolor = !isMulticolor;
+  multiBtn.textContent = isMulticolor ? 'Single Color' : 'Multicolor';
+  Object.values(axisColors).forEach(el => el.classList.toggle('hidden', !isMulticolor));
+  
+  // When switching to multicolor, default axis colors to the current ability color
+  if (isMulticolor) {
+    Object.values(axisColors).forEach(el => el.value = chartColor);
+  }
+  updateCharts();
+});
+
+/* === INPUTS === */
+inputElements.forEach(el => {
+  el.addEventListener('input', updateCharts);
+  el.addEventListener('change', updateCharts);
+});
+
+/* === IMAGE UPLOAD === */
+imgInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => (uploadedImg.src = ev.target.result);
+  reader.readAsDataURL(file);
+});
+
+/* === OVERLAY === */
+viewBtn.addEventListener('click', () => {
+  overlay.classList.remove('hidden');
+  overlayImg.src = uploadedImg.src;
+  overlayName.textContent = nameInput.value || '-';
+  overlayAbility.textContent = abilityInput.value || '-';
+  overlayLevel.textContent = levelInput.value || '-';
+
+  setTimeout(() => {
+    const img = document.getElementById('overlayImg');
+    const textBox = document.querySelector('.text-box');
+    const overlayChart = document.querySelector('.overlay-chart');
+    const imgHeight = img.offsetHeight;
+    const textHeight = textBox.offsetHeight;
+    const targetSize = (imgHeight + textHeight) * CHART_SIZE_MULTIPLIER;
+
+    // Adjust chart size dynamically
+    if (overlayChart.style.height !== `${targetSize}px`) {
+      overlayChart.style.height = `${targetSize}px`;
+      overlayChart.style.width = `${targetSize}px`;
+    }
+
+    // Ensure radar2 is initialized/resized on opening
+    const ctx2 = document.getElementById('radarChart2').getContext('2d');
+    if (!radar2Ready) {
+      radar2 = makeRadar(ctx2, false, true, { x: targetSize / 2, y: targetSize / 2 });
+      radar2.options.scales.r.suggestedMax = 10;
+      radar2Ready = true;
+    } else radar2.resize();
+    
+    updateCharts(); // Final sync before view
+  }, 200);
+});
+
+closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
+
+/* === DOWNLOAD === */
+downloadBtn.addEventListener('click', () => {
+  downloadBtn.style.visibility = 'hidden';
+  closeBtn.style.visibility = 'hidden';
+  const box = document.getElementById('characterBox');
+  html2canvas(box, { scale: 2 }).then(canvas => {
+    const link = document.createElement('a');
+    const cleanName = (nameInput.value || 'Unnamed').replace(/\s+/g, '_');
+    link.download = `${cleanName}_CharacterChart.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    downloadBtn.style.visibility = 'visible';
+    closeBtn.style.visibility = 'visible';
+  });
+});
