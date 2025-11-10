@@ -45,20 +45,25 @@ const segmentedFillPlugin = {
         const colors = getAxisColors();
 
         ctx.save();
-        ctx.globalAlpha = 0.6;
+        ctx.globalAlpha = 0.9;
 
+        // Draw gradient-filled wedges between each pair of axes
         for (let i = 0; i < N; i++) {
             const currentVal = data[i] || 0;
             const nextVal = data[(i + 1) % N] || 0;
             const pt1 = r.getPointPosition(i, currentVal);
             const pt2 = r.getPointPosition((i + 1) % N, nextVal);
 
+            const grad = ctx.createLinearGradient(pt1.x, pt1.y, pt2.x, pt2.y);
+            grad.addColorStop(0, hexToRGBA(colors[i], 0.7));
+            grad.addColorStop(1, hexToRGBA(colors[(i + 1) % N], 0.7));
+
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(pt1.x, pt1.y);
             ctx.lineTo(pt2.x, pt2.y);
             ctx.closePath();
-            ctx.fillStyle = colors[i];
+            ctx.fillStyle = grad;
             ctx.fill();
         }
 
@@ -255,7 +260,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
             customFill: { enabled: false },
             fixedCenter: { enabled: !!fixedCenter, centerX: fixedCenter?.x, centerY: fixedCenter?.y },
             abilityColor: chartColor,
-            plugins: { legend: { display: false } }
+            plugins: { legend: { display: false }, segmentedFill: { enabled: false } }
         },
         plugins: plugins
     });
@@ -332,12 +337,12 @@ function updateCharts() {
         chart.options.scales.r.angleLines.color = FIXED_SPOKE_COLOR;
         chart.data.datasets[0].borderColor = FIXED_BORDER_COLOR;
         chart.data.datasets[0].pointBorderColor = FIXED_BORDER_COLOR;
-        chart.options.customFill.enabled = false;
 
         if (isMulticolor) {
-            chart.options.customFill.enabled = true;
+            chart.options.plugins.segmentedFill.enabled = true;
             chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)';
         } else {
+            chart.options.plugins.segmentedFill.enabled = false;
             Object.values(axisColors).forEach(input => {
                 input.value = chartColor;
                 input.dataset.userSelected = false;
