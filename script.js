@@ -3,7 +3,7 @@ let radar2Ready = false;
 let chartColor = '#92dfec';
 let isMulticolor = false;
 
-// Fixed colors for the spokes and polygon border, as requested
+// Fixed colors for the spokes and polygon border
 const FIXED_BORDER_COLOR = '#493e3b';
 const FIXED_SPOKE_COLOR = '#6db5c0';
 const DEFAULT_FILL_OPACITY = 0.65;
@@ -30,7 +30,7 @@ function getAxisColors() {
 
 /* === PLUGINS === */
 
-// Plugin to draw the polygon as individually colored, blended wedges (for multicolor mode)
+// Plugin to draw colored wedges (for multicolor mode)
 const segmentedFillPlugin = {
     id: 'segmentedFill',
     beforeDatasetsDraw(chart, args, options) {
@@ -45,37 +45,30 @@ const segmentedFillPlugin = {
         const colors = getAxisColors();
 
         ctx.save();
-        ctx.globalAlpha = 0.5; // Global transparency for blending effect
+        ctx.globalAlpha = 0.6;
 
-        // Draw each segment (wedge)
         for (let i = 0; i < N; i++) {
-            const currentAxisValue = data[i] || 0;
-            const nextAxisIndex = (i + 1) % N;
-            const nextAxisValue = data[nextAxisIndex] || 0;
+            const currentVal = data[i] || 0;
+            const nextVal = data[(i + 1) % N] || 0;
+            const pt1 = r.getPointPosition(i, currentVal);
+            const pt2 = r.getPointPosition((i + 1) % N, nextVal);
 
-            // Get the pixel coordinates for the current data point and the next data point
-            const pointPositionCurrent = r.getPointPosition(i, currentAxisValue);
-            const pointPositionNext = r.getPointPosition(nextAxisIndex, nextAxisValue);
-            
-            // Define the path for the wedge: Center -> Current Point -> Next Point -> Center
             ctx.beginPath();
             ctx.moveTo(cx, cy);
-            ctx.lineTo(pointPositionCurrent.x, pointPositionCurrent.y);
-            ctx.lineTo(pointPositionNext.x, pointPositionNext.y);
+            ctx.lineTo(pt1.x, pt1.y);
+            ctx.lineTo(pt2.x, pt2.y);
             ctx.closePath();
-
-            // Use the current axis color for the fill
             ctx.fillStyle = colors[i];
             ctx.fill();
         }
+
         ctx.restore();
     },
 };
 
-// Plugin to draw the fixed background pentagon and FIXED spokes (Grid)
+// Plugin to draw pentagon background and fixed spokes
 const radarGridPlugin = {
     id: 'customPentagonBackground',
-    // Draw the background pentagon color fill
     beforeDatasetsDraw(chart) {
         const opts = chart.config.options.customBackground;
         if (!opts?.enabled) return;
@@ -85,7 +78,7 @@ const radarGridPlugin = {
 
         const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
         gradient.addColorStop(0, '#f8fcff');
-        gradient.addColorStop(0.33, chartColor); // Use the main color for the base
+        gradient.addColorStop(0.33, chartColor);
         gradient.addColorStop(1, chartColor);
 
         ctx.save();
@@ -101,7 +94,6 @@ const radarGridPlugin = {
         ctx.fill();
         ctx.restore();
     },
-    // Draw the FIXED axes (spokes) and outer border
     afterDatasetsDraw(chart) {
         const opts = chart.config.options.customBackground;
         if (!opts?.enabled) return;
@@ -110,7 +102,7 @@ const radarGridPlugin = {
         const N = chart.data.labels.length, start = -Math.PI / 2;
 
         ctx.save();
-        // Draw axes (spokes) - MUST use FIXED_SPOKE_COLOR
+        // spokes
         ctx.beginPath();
         for (let i = 0; i < N; i++) {
             const a = start + (i * 2 * Math.PI / N);
@@ -119,11 +111,11 @@ const radarGridPlugin = {
             ctx.moveTo(cx, cy);
             ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = FIXED_SPOKE_COLOR; // FIXED COLOR
+        ctx.strokeStyle = FIXED_SPOKE_COLOR;
         ctx.lineWidth = 1;
         ctx.stroke();
-        
-        // Draw outer border - MUST use FIXED_BORDER_COLOR
+
+        // border
         ctx.beginPath();
         for (let i = 0; i < N; i++) {
             const a = start + (i * 2 * Math.PI / N);
@@ -132,7 +124,7 @@ const radarGridPlugin = {
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.closePath();
-        ctx.strokeStyle = FIXED_BORDER_COLOR; // FIXED COLOR
+        ctx.strokeStyle = FIXED_BORDER_COLOR;
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.restore();
@@ -172,12 +164,10 @@ const outlinedLabelsPlugin = {
         ctx.lineWidth = 4;
 
         labels.forEach((label, i) => {
-            let angle = base + (i * 2 * Math.PI / labels.length);
-            let radiusToUse = baseRadius;
-            const x = cx + radiusToUse * Math.cos(angle);
-            let y = cy + radiusToUse * Math.sin(angle);
+            const angle = base + (i * 2 * Math.PI / labels.length);
+            const x = cx + baseRadius * Math.cos(angle);
+            let y = cy + baseRadius * Math.sin(angle);
             if (i === 0) y -= 5;
-
             ctx.strokeText(label, x, y);
             ctx.fillText(label, x, y);
         });
@@ -188,9 +178,7 @@ const outlinedLabelsPlugin = {
 const inputValuePlugin = {
     id: 'inputValuePlugin',
     afterDraw(chart) {
-        // Skip for the background chart (chart2)
-        if (chart.config.options.customBackground.enabled) return; 
-        
+        if (chart.config.options.customBackground.enabled) return;
         const ctx = chart.ctx;
         const r = chart.scales.r;
         const data = chart.data.datasets[0].data;
@@ -211,12 +199,8 @@ const inputValuePlugin = {
 
         labels.forEach((label, i) => {
             const angle = base + (i * 2 * Math.PI / labels.length);
-            let radiusToUse = baseRadius;
-
-            const x = cx + (radiusToUse + offset) * Math.cos(angle);
-            let y = cy + (radiusToUse + offset) * Math.sin(angle);
-            
-            // Adjust label positioning slightly for visual balance
+            const x = cx + (baseRadius + offset) * Math.cos(angle);
+            let y = cy + (baseRadius + offset) * Math.sin(angle);
             if (i === 0) y -= 20;
             else if (i === 1) y += 10;
             else if (i === 4) y += 10;
@@ -229,16 +213,14 @@ const inputValuePlugin = {
     }
 };
 
-
 /* === CHART CREATOR === */
 function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter = null) {
-    // Collect all plugins
     const plugins = [
-        fixedCenterPlugin, 
-        radarGridPlugin, 
-        outlinedLabelsPlugin, 
+        fixedCenterPlugin,
+        radarGridPlugin,
+        outlinedLabelsPlugin,
         inputValuePlugin,
-        segmentedFillPlugin // Always include, but activation is controlled by options
+        segmentedFillPlugin
     ];
 
     return new Chart(ctx, {
@@ -247,10 +229,8 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
             labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
             datasets: [{
                 data: [0, 0, 0, 0, 0],
-                // Default to single color fill (will be overwritten in updateCharts)
-                backgroundColor: hexToRGBA(chartColor, DEFAULT_FILL_OPACITY), 
-                // Use fixed colors
-                borderColor: FIXED_BORDER_COLOR, 
+                backgroundColor: hexToRGBA(chartColor, DEFAULT_FILL_OPACITY),
+                borderColor: FIXED_BORDER_COLOR,
                 borderWidth: 2,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: FIXED_BORDER_COLOR,
@@ -264,8 +244,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
             scales: {
                 r: {
                     grid: { display: false },
-                    // CRITICAL: Set angleLines (Spokes) to fixed color
-                    angleLines: { color: FIXED_SPOKE_COLOR, lineWidth: 1 }, 
+                    angleLines: { color: FIXED_SPOKE_COLOR, lineWidth: 1 },
                     suggestedMin: 0,
                     suggestedMax: 10,
                     ticks: { display: false },
@@ -273,7 +252,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
                 }
             },
             customBackground: { enabled: withBackground },
-            customFill: { enabled: false }, // Controlled by updateCharts
+            customFill: { enabled: false },
             fixedCenter: { enabled: !!fixedCenter, centerX: fixedCenter?.x, centerY: fixedCenter?.y },
             abilityColor: chartColor,
             plugins: { legend: { display: false } }
@@ -298,11 +277,6 @@ const speedInput = document.getElementById('speedInput');
 const trickInput = document.getElementById('trickInput');
 const recoveryInput = document.getElementById('recoveryInput');
 const defenseInput = document.getElementById('defenseInput');
-const powerValueSpan = document.getElementById('powerValue');
-const speedValueSpan = document.getElementById('speedValue');
-const trickValueSpan = document.getElementById('trickValue');
-const recoveryValueSpan = document.getElementById('recoveryValue');
-const defenseValueSpan = document.getElementById('defenseValue');
 const colorPicker = document.getElementById('colorPicker');
 const multiBtn = document.getElementById('multiBtn');
 const nameInput = document.getElementById('nameInput');
@@ -327,8 +301,7 @@ window.addEventListener('load', () => {
     chartColor = colorPicker.value || chartColor;
     const ctx1 = document.getElementById('radarChart1').getContext('2d');
     radar1 = makeRadar(ctx1, true, false);
-    
-    // Initialize axis colors to main color for single color mode clarity
+
     Object.values(axisColors).forEach(input => {
         input.value = chartColor;
     });
@@ -350,38 +323,24 @@ function updateCharts() {
     const solidFill = hexToRGBA(chartColor, DEFAULT_FILL_OPACITY);
     const capped = vals.map(v => Math.min(v, 10));
 
-    // Update range value displays
-    powerValueSpan.textContent = powerInput.value;
-    speedValueSpan.textContent = speedInput.value;
-    trickValueSpan.textContent = trickInput.value;
-    recoveryValueSpan.textContent = recoveryInput.value;
-    defenseValueSpan.textContent = defenseInput.value;
-
     [radar1, radar2].forEach((chart, i) => {
         if (!chart) return;
-        
-        // Update general options
         chart.options.scales.r.suggestedMax = i === 0 ? maxVal : 10;
         chart.options.abilityColor = chartColor;
         chart.data.datasets[0].data = i === 0 ? vals : capped;
-        
-        // Ensure spokes are always fixed color
+
         chart.options.scales.r.angleLines.color = FIXED_SPOKE_COLOR;
-        chart.data.datasets[0].borderColor = FIXED_BORDER_COLOR; 
+        chart.data.datasets[0].borderColor = FIXED_BORDER_COLOR;
         chart.data.datasets[0].pointBorderColor = FIXED_BORDER_COLOR;
-        chart.options.customFill.enabled = false; // Reset fill plugin
+        chart.options.customFill.enabled = false;
 
         if (isMulticolor) {
-            // MULTICOLOR MODE: Enable custom segmented fill plugin
             chart.options.customFill.enabled = true;
-            // Set chart fill to transparent so the plugin drawing is visible
-            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)'; 
+            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)';
         } else {
-            // SINGLE COLOR MODE: Use solid color fill
-            // Sync all axis inputs to main color and use solid fill
             Object.values(axisColors).forEach(input => {
                 input.value = chartColor;
-                input.dataset.userSelected = false; 
+                input.dataset.userSelected = false;
             });
             chart.data.datasets[0].backgroundColor = solidFill;
         }
@@ -390,27 +349,24 @@ function updateCharts() {
     });
 }
 
-// Attach event listeners to update chart on input changes
+/* === INPUT HANDLERS === */
 inputElements.forEach(el => {
     el.addEventListener('input', updateCharts);
     el.addEventListener('change', updateCharts);
 });
 
-/* Track manual axis color changes */
 Object.values(axisColors).forEach(input => {
-    input.addEventListener('input', () => { 
-        input.dataset.userSelected = true; 
-        updateCharts(); 
+    input.addEventListener('input', () => {
+        input.dataset.userSelected = true;
+        updateCharts();
     });
 });
 
-// Primary color picker logic
 colorPicker.addEventListener('input', () => {
     chartColor = colorPicker.value;
     if (!isMulticolor) {
-        // In single color mode, sync all axis inputs
-        Object.values(axisColors).forEach(input => { 
-            input.value = chartColor; 
+        Object.values(axisColors).forEach(input => {
+            input.value = chartColor;
         });
     }
     updateCharts();
@@ -428,17 +384,14 @@ imgInput.addEventListener('change', e => {
 /* === MULTICOLOR BUTTON === */
 multiBtn.addEventListener('click', () => {
     isMulticolor = !isMulticolor;
-    const axisColorGroups = document.querySelectorAll('[data-axis-color-group]');
+    const axisColorInputs = document.querySelectorAll('.axisColor');
 
     if (isMulticolor) {
         multiBtn.textContent = 'Single Color';
-        axisColorGroups.forEach(group => group.classList.remove('hidden'));
-        document.querySelectorAll('.axisColor').forEach(input => input.classList.remove('hidden'));
+        axisColorInputs.forEach(input => input.classList.remove('hidden'));
     } else {
         multiBtn.textContent = 'Multicolor';
-        axisColorGroups.forEach(group => group.classList.add('hidden'));
-        document.querySelectorAll('.axisColor').forEach(input => input.classList.add('hidden'));
-        // When switching back to single, reset all axis colors to main chart color
+        axisColorInputs.forEach(input => input.classList.add('hidden'));
         Object.values(axisColors).forEach(input => {
             input.value = chartColor;
             input.dataset.userSelected = false;
@@ -456,47 +409,31 @@ viewBtn.addEventListener('click', () => {
     overlayLevel.textContent = levelInput.value || 'N/A';
 
     setTimeout(() => {
-        const box = document.getElementById('characterBox');
-        const img = document.getElementById('uploadedImg');
-        const textBox = document.querySelector('.text-box');
-        const overlayChartContainer = document.querySelector('.overlay-chart');
-
-        // Calculate a target size based on the content height (arbitrary sizing for visual effect)
-        const targetSize = Math.max(img.offsetHeight + textBox.offsetHeight, 300) * 1.1; 
-
-        overlayChartContainer.style.height = `${targetSize}px`;
-        overlayChartContainer.style.width = `${targetSize}px`;
+        const overlayChart = document.querySelector('.overlay-chart');
+        const targetSize = 400;
+        overlayChart.style.height = `${targetSize}px`;
+        overlayChart.style.width = `${targetSize}px`;
 
         const ctx2 = document.getElementById('radarChart2').getContext('2d');
-        
-        // Only initialize radar2 once
         if (!radar2Ready) {
-            // Determine the center position relative to the new container size
             const center = { x: targetSize / 2, y: targetSize / 2 };
             radar2 = makeRadar(ctx2, false, true, center);
             radar2Ready = true;
         } else {
-            // Resize and reposition the center if already initialized
-            const center = { x: targetSize / 2, y: targetSize / 2 };
-            radar2.options.fixedCenter = { enabled: true, centerX: center.x, centerY: center.y };
             radar2.resize();
         }
-        
         updateCharts();
-    }, 200); // Small delay to allow element sizing to complete
+    }, 200);
 });
 
 closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
 /* === DOWNLOAD === */
 downloadBtn.addEventListener('click', () => {
-    // Hide controls before capture
     downloadBtn.style.visibility = 'hidden';
     closeBtn.style.visibility = 'hidden';
 
     const box = document.getElementById('characterBox');
-    
-    // html2canvas capture
     html2canvas(box, { scale: 3 }).then(canvas => {
         const link = document.createElement('a');
         const cleanName = (nameInput.value || 'Unnamed').replace(/\s+/g, '_');
@@ -504,7 +441,6 @@ downloadBtn.addEventListener('click', () => {
         link.href = canvas.toDataURL('image/png');
         link.click();
 
-        // Restore controls visibility
         downloadBtn.style.visibility = 'visible';
         closeBtn.style.visibility = 'visible';
     });
