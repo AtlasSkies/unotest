@@ -19,18 +19,14 @@ function hexToRGBA(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/* === Smooth multi-color gradient === */
+/* === Smooth conic gradient === */
 function makeConicGradient(chart, axisColors, alpha = 0.65) {
   const r = chart.scales.r;
   const ctx = chart.ctx;
   const cx = r.xCenter, cy = r.yCenter;
   const N = chart.data.labels.length;
-  const angleOffset = -Math.PI / 2; // align “Power” to top
-  const grad = ctx.createConicGradient(angleOffset, cx, cy);
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    grad.addColorStop(t, hexToRGBA(axisColors[i % N], alpha));
-  }
+  const grad = ctx.createConicGradient(-Math.PI / 2, cx, cy);
+  for (let i = 0; i <= N; i++) grad.addColorStop(i / N, hexToRGBA(axisColors[i % N], alpha));
   return grad;
 }
 
@@ -56,7 +52,6 @@ const fixedCenterPlugin = {
   }
 };
 
-/* --- Pentagon background --- */
 const radarBackgroundPlugin = {
   id: 'customPentagonBackground',
   beforeDatasetsDraw(chart) {
@@ -115,7 +110,6 @@ const radarBackgroundPlugin = {
   }
 };
 
-/* --- Axis titles --- */
 const outlinedLabelsPlugin = {
   id: 'outlinedLabels',
   afterDraw(chart) {
@@ -149,10 +143,10 @@ const outlinedLabelsPlugin = {
   }
 };
 
-/* --- Numeric “(value)” labels --- */
 const inputValuePlugin = {
   id: 'inputValuePlugin',
   afterDraw(chart) {
+    if (chart.config.options.customBackground?.enabled) return;
     const ctx = chart.ctx;
     const r = chart.scales.r;
     const data = chart.data.datasets[0].data;
@@ -168,26 +162,12 @@ const inputValuePlugin = {
     ctx.textBaseline = 'top';
     labels.forEach((label, i) => {
       const angle = base + (i * 2 * Math.PI / labels.length);
-      const radiusToUse = baseRadius;
+      let radiusToUse = baseRadius;
       const x = cx + (radiusToUse + offset) * Math.cos(angle);
       let y = cy + (radiusToUse + offset) * Math.sin(angle);
       if (i === 0) y -= 20;
       ctx.fillText(`(${data[i] || 0})`, x, y);
     });
-    ctx.restore();
-  }
-};
-
-/* --- “AS” watermark --- */
-const watermarkPlugin = {
-  id: 'asWatermark',
-  afterDraw(chart) {
-    if (chart.canvas.id !== 'radarChart2') return; // only popup chart
-    const ctx = chart.ctx;
-    ctx.save();
-    ctx.font = 'bold 12px Candara';
-    ctx.fillStyle = 'rgba(0,0,0,0.05)';
-    ctx.fillText('AS', 20, chart.height - 20);
     ctx.restore();
   }
 };
@@ -228,7 +208,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
       fixedCenter: { enabled: !!fixedCenter, centerX: fixedCenter?.x, centerY: fixedCenter?.y },
       plugins: { legend: { display: false } }
     },
-    plugins: [fixedCenterPlugin, radarBackgroundPlugin, outlinedLabelsPlugin, inputValuePlugin, watermarkPlugin]
+    plugins: [fixedCenterPlugin, radarBackgroundPlugin, outlinedLabelsPlugin, inputValuePlugin]
   });
 }
 
@@ -268,7 +248,6 @@ const axisColorPickers = [
    INIT
 ======================= */
 const CHART1_CENTER = { x: 247, y: 250 };
-
 window.addEventListener('load', () => {
   const ctx1 = document.getElementById('radarChart1').getContext('2d');
   radar1 = makeRadar(ctx1, true, false, CHART1_CENTER);
@@ -309,18 +288,14 @@ function updateCharts() {
 [powerInput, speedInput, trickInput, recoveryInput, defenseInput].forEach(el => {
   el.addEventListener('input', updateCharts);
 });
-
 colorPicker.addEventListener('input', () => {
   const newAbility = colorPicker.value;
   axisColorPickers.forEach(p => {
-    if (p.value.toLowerCase() === lastAbilityColor.toLowerCase()) {
-      p.value = newAbility;
-    }
+    if (p.value.toLowerCase() === lastAbilityColor.toLowerCase()) p.value = newAbility;
   });
   lastAbilityColor = newAbility;
   updateCharts();
 });
-
 axisColorPickers.forEach(p => p.addEventListener('input', () => multiColorMode && updateCharts()));
 
 multiColorBtn.addEventListener('click', () => {
@@ -353,27 +328,17 @@ viewBtn.addEventListener('click', () => {
     updateCharts();
   }, 200);
 });
-
 closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
 downloadBtn.addEventListener('click', () => {
   downloadBtn.style.visibility = 'hidden';
   closeBtn.style.visibility = 'hidden';
   const box = document.getElementById('characterBox');
-  const originalFlex = box.style.flexDirection;
-  const originalWidth = box.style.width;
-  const originalHeight = box.style.height;
-  box.style.flexDirection = 'row';
-  box.style.width = '52vw';
-  box.style.height = '64vh';
   html2canvas(box, { scale: 2 }).then(canvas => {
     const link = document.createElement('a');
     link.download = `${(nameInput.value || 'Unnamed').replace(/\s+/g, '_')}_CharacterChart.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    box.style.flexDirection = originalFlex;
-    box.style.width = originalWidth;
-    box.style.height = originalHeight;
     downloadBtn.style.visibility = 'visible';
     closeBtn.style.visibility = 'visible';
   });
