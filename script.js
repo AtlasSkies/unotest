@@ -45,25 +45,26 @@ const segmentedFillPlugin = {
         const colors = getAxisColors();
 
         ctx.save();
-        ctx.globalAlpha = 0.9;
+        // Set a global opacity for all wedges
+        ctx.globalAlpha = 0.85; 
 
-        // Draw gradient-filled wedges between each pair of axes
+        // Draw solid-filled wedges between each pair of axes
         for (let i = 0; i < N; i++) {
             const currentVal = data[i] || 0;
             const nextVal = data[(i + 1) % N] || 0;
             const pt1 = r.getPointPosition(i, currentVal);
             const pt2 = r.getPointPosition((i + 1) % N, nextVal);
-
-            const grad = ctx.createLinearGradient(pt1.x, pt1.y, pt2.x, pt2.y);
-            grad.addColorStop(0, hexToRGBA(colors[i], 0.7));
-            grad.addColorStop(1, hexToRGBA(colors[(i + 1) % N], 0.7));
+            
+            // Use the solid color of the current axis for the wedge fill.
+            // This is more reliable than using a linear gradient across the edge.
+            const solidFillColor = hexToRGBA(colors[i], 1.0); 
 
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(pt1.x, pt1.y);
             ctx.lineTo(pt2.x, pt2.y);
             ctx.closePath();
-            ctx.fillStyle = grad;
+            ctx.fillStyle = solidFillColor;
             ctx.fill();
         }
 
@@ -234,8 +235,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
             labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
             datasets: [{
                 data: [0, 0, 0, 0, 0],
-                // FIX: Ensure fill is always true for the radar area to be drawn,
-                // which is required for custom fill plugins to work correctly.
+                // fill: true is crucial for the area polygon to exist, even if we draw the fill with plugins
                 fill: true, 
                 backgroundColor: hexToRGBA(chartColor, DEFAULT_FILL_OPACITY),
                 borderColor: FIXED_BORDER_COLOR,
