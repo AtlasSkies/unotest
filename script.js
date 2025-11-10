@@ -1,10 +1,11 @@
 let radar1, radar2;
 let radar2Ready = false;
-let chartColor = '#92dfec'; // Default color from V1/V2 HTML
+let chartColor = '#92dfec'; // default color
 let isMulticolor = false;
 
 const CHART1_CENTER = { x: 247, y: 250 };
-const CHART_SIZE_MULTIPLIER = 1.0; // Kept from V1 for potential scaling in overlay
+const CHART_SCALE_FACTOR = 1.0;
+const CHART_SIZE_MULTIPLIER = 1.0;
 
 /* === UTILITIES === */
 function hexToRGBA(hex, alpha) {
@@ -15,7 +16,6 @@ function hexToRGBA(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-// Function to get axis colors (from V2)
 function getAxisColors() {
   return [
     axisColors.power.value,
@@ -26,9 +26,7 @@ function getAxisColors() {
   ];
 }
 
-/* === PLUGINS (V1 logic with V2 compatibility) === */
-
-/* === FIXED CENTER (V1) === */
+/* === PLUGINS === */
 const fixedCenterPlugin = {
   id: 'fixedCenter',
   beforeLayout(chart) {
@@ -42,7 +40,6 @@ const fixedCenterPlugin = {
   }
 };
 
-/* === BACKGROUND + SPOKES (V1 Colors) === */
 const radarBackgroundPlugin = {
   id: 'customPentagonBackground',
   beforeDatasetsDraw(chart) {
@@ -52,7 +49,6 @@ const radarBackgroundPlugin = {
     const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
     const N = chart.data.labels.length, start = -Math.PI / 2;
 
-    // V1 Specific Colors
     const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
     gradient.addColorStop(0, '#f8fcff');
     gradient.addColorStop(0.33, '#92dfec');
@@ -87,8 +83,7 @@ const radarBackgroundPlugin = {
       ctx.moveTo(cx, cy);
       ctx.lineTo(x, y);
     }
-    // V1 Specific Colors
-    ctx.strokeStyle = '#35727d'; 
+    ctx.strokeStyle = '#35727d';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -100,15 +95,13 @@ const radarBackgroundPlugin = {
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.closePath();
-    // V1 Specific Colors
-    ctx.strokeStyle = '#184046'; 
+    ctx.strokeStyle = '#184046';
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
   }
 };
 
-/* === OUTLINED LABELS (V1 Positioning) === */
 const outlinedLabelsPlugin = {
   id: 'outlinedLabels',
   afterDraw(chart) {
@@ -121,28 +114,23 @@ const outlinedLabelsPlugin = {
     const extendedRadius = r.drawingArea * 1.15;
     const base = -Math.PI / 2;
 
-    // Use current chart color
     const currentChartColor = chart.config.options.abilityColor;
-
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = 'italic 18px Candara';
-    ctx.strokeStyle = currentChartColor; // Use the ability color for the outline
+    ctx.strokeStyle = currentChartColor;
     ctx.fillStyle = 'white';
     ctx.lineWidth = 4;
 
     labels.forEach((label, i) => {
       let angle = base + (i * 2 * Math.PI / labels.length);
       let radiusToUse = baseRadius;
-      // V1 Specific Positioning Logic
       if (isOverlayChart && (i === 1 || i === 4)) radiusToUse = extendedRadius;
       const x = cx + radiusToUse * Math.cos(angle);
       let y = cy + radiusToUse * Math.sin(angle);
-
-      // V1 Specific Positioning Logic
       if (i === 0) y -= 5;
-      if (isOverlayChart && (i === 1 || i === 4)) y -= 42; 
+      if (isOverlayChart && (i === 1 || i === 4)) y -= 42;
 
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
@@ -151,13 +139,10 @@ const outlinedLabelsPlugin = {
   }
 };
 
-/* === NUMERIC LABELS (V1 Positioning) === */
 const inputValuePlugin = {
   id: 'inputValuePlugin',
   afterDraw(chart) {
-    // Only draw values on the main chart if it doesn't have the V1 background
-    if (chart.config.options.customBackground.enabled) return; 
-    
+    if (chart.config.options.customBackground.enabled) return;
     const ctx = chart.ctx;
     const r = chart.scales.r;
     const data = chart.data.datasets[0].data;
@@ -167,26 +152,21 @@ const inputValuePlugin = {
     const base = -Math.PI / 2;
     const offset = 20;
 
-    // Use current chart color for the outline of the numbers
     const currentChartColor = chart.config.options.abilityColor;
-
     ctx.save();
     ctx.font = '15px Candara';
     ctx.fillStyle = 'white';
     ctx.strokeStyle = currentChartColor;
-    ctx.lineWidth = 2; // Thinner outline for numbers
+    ctx.lineWidth = 2;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     labels.forEach((label, i) => {
       const angle = base + (i * 2 * Math.PI / labels.length);
       let radiusToUse = baseRadius;
-      // V1 Specific Positioning Logic
       if (chart.canvas.id === 'radarChart2' && (i === 1 || i === 4)) radiusToUse = r.drawingArea * 1.15;
       const x = cx + (radiusToUse + offset) * Math.cos(angle);
       let y = cy + (radiusToUse + offset) * Math.sin(angle);
-
-      // V1 Specific Positioning Logic
       if (i === 0) y -= 20;
       if (chart.canvas.id === 'radarChart2') {
         if (i === 1 || i === 4) y -= 22;
@@ -194,8 +174,7 @@ const inputValuePlugin = {
         if (i === 1) y += 20;
         if (i === 4) y += 20;
       }
-      
-      const valueText = `(${data[i].toFixed(1)})`; // Display with one decimal point
+      const valueText = `(${data[i] ? data[i].toFixed(1) : '0.0'})`;
       ctx.strokeText(valueText, x, y);
       ctx.fillText(valueText, x, y);
     });
@@ -203,7 +182,7 @@ const inputValuePlugin = {
   }
 };
 
-/* === CHART CREATOR === */
+/* === CREATE CHART === */
 function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter = null) {
   return new Chart(ctx, {
     type: 'radar',
@@ -226,7 +205,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
       scales: {
         r: {
           grid: { display: false },
-          angleLines: { color: '#6db5c0', lineWidth: 1 }, // V1 color
+          angleLines: { color: '#6db5c0', lineWidth: 1 },
           suggestedMin: 0,
           suggestedMax: 10,
           ticks: { display: false },
@@ -235,7 +214,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
       },
       customBackground: { enabled: withBackground },
       fixedCenter: { enabled: !!fixedCenter, centerX: fixedCenter?.x, centerY: fixedCenter?.y },
-      abilityColor: chartColor, // Store ability color in options for plugins
+      abilityColor: chartColor,
       plugins: { legend: { display: false } }
     },
     plugins: [fixedCenterPlugin, radarBackgroundPlugin, outlinedLabelsPlugin, inputValuePlugin]
@@ -253,13 +232,11 @@ const overlayAbility = document.getElementById('overlayAbility');
 const overlayLevel = document.getElementById('overlayLevel');
 const closeBtn = document.getElementById('closeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
-
 const powerInput = document.getElementById('powerInput');
 const speedInput = document.getElementById('speedInput');
 const trickInput = document.getElementById('trickInput');
 const recoveryInput = document.getElementById('recoveryInput');
 const defenseInput = document.getElementById('defenseInput');
-
 const colorPicker = document.getElementById('colorPicker');
 const multiBtn = document.getElementById('multiBtn');
 const nameInput = document.getElementById('nameInput');
@@ -287,7 +264,7 @@ window.addEventListener('load', () => {
   updateCharts();
 });
 
-/* === UPDATE CHARTS (V2 Logic) === */
+/* === UPDATE === */
 function updateCharts() {
   const vals = [
     +powerInput.value || 0,
@@ -301,11 +278,7 @@ function updateCharts() {
   const fill = hexToRGBA(chartColor, 0.65);
   const capped = vals.map(v => Math.min(v, 10));
 
-  // Determine colors based on multicolor toggle (V2 Logic)
-  let borderColors;
-  let pointBorderColors;
-  let backgroundColors;
-
+  let borderColors, backgroundColors, pointBorderColors;
   if (isMulticolor) {
     borderColors = getAxisColors();
     pointBorderColors = getAxisColors();
@@ -316,7 +289,6 @@ function updateCharts() {
     backgroundColors = fill;
   }
 
-  // Update radar1
   if (radar1) {
     radar1.options.scales.r.suggestedMax = maxVal;
     radar1.options.abilityColor = chartColor;
@@ -327,7 +299,6 @@ function updateCharts() {
     radar1.update();
   }
 
-  // Update radar2 (overlay chart)
   if (radar2Ready && radar2) {
     radar2.options.abilityColor = chartColor;
     radar2.data.datasets[0].data = capped;
@@ -338,7 +309,6 @@ function updateCharts() {
   }
 }
 
-/* === INPUT LISTENERS === */
 inputElements.forEach(el => {
   el.addEventListener('input', updateCharts);
   el.addEventListener('change', updateCharts);
@@ -352,11 +322,11 @@ imgInput.addEventListener('change', e => {
   reader.readAsDataURL(file);
 });
 
-/* === MULTICOLOR TOGGLE (V2 Logic) === */
+/* === MULTICOLOR === */
 multiBtn.addEventListener('click', () => {
   isMulticolor = !isMulticolor;
   const axisColorInputs = document.querySelectorAll('.axisColor');
-  
+
   if (isMulticolor) {
     multiBtn.textContent = 'Single Color';
     multiBtn.style.backgroundColor = 'red';
@@ -371,7 +341,7 @@ multiBtn.addEventListener('click', () => {
   updateCharts();
 });
 
-/* === OVERLAY (V1/V2 Logic) === */
+/* === OVERLAY === */
 viewBtn.addEventListener('click', () => {
   overlay.classList.remove('hidden');
   overlayImg.src = uploadedImg.src;
@@ -401,7 +371,7 @@ viewBtn.addEventListener('click', () => {
         left: '10px',
         fontFamily: 'Candara',
         fontWeight: 'bold',
-        fontSize: '6px',
+        fontSize: '9px',
         color: 'rgba(0,0,0,0.15)',
         pointerEvents: 'none',
         zIndex: '2'
@@ -415,10 +385,7 @@ viewBtn.addEventListener('click', () => {
       radar2.options.scales.r.suggestedMax = 10;
       radar2Ready = true;
     } else {
-      // Re-initialize or resize if dimensions changed
-      radar2.resize(); 
-      radar2.options.fixedCenter.centerX = targetSize / 2;
-      radar2.options.fixedCenter.centerY = targetSize / 2;
+      radar2.resize();
     }
     updateCharts();
   }, 200);
@@ -426,7 +393,7 @@ viewBtn.addEventListener('click', () => {
 
 closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
-/* === DOWNLOAD (V1 Logic) === */
+/* === DOWNLOAD === */
 downloadBtn.addEventListener('click', () => {
   downloadBtn.style.visibility = 'hidden';
   closeBtn.style.visibility = 'hidden';
