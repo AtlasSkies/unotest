@@ -263,3 +263,25 @@ button:hover {
     max-height: 35vh;
   }
 }
+.chart-area {
+  position: relative;
+  width: clamp(300px, 40vw, 500px);
+  height: clamp(300px, 40vw, 500px);
+}
+
+.stacked-chart {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.popup-watermark {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.1);
+  font-family: Candara;
+  pointer-events: none;
+}
