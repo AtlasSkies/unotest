@@ -1,10 +1,8 @@
-let charts = [];          // [{ chart, canvas, color, stats[5], multi, axis[5] }]
+let charts = [];
 let activeChart = 0;
 let radar2, radar2Ready = false;
 
-/* ==========================
-   UTILITIES
-========================== */
+/* ========== UTILITIES ========== */
 function hexToRGBA(hex, alpha) {
   if (!hex) hex = "#92dfec";
   if (hex.startsWith("rgb")) return hex.replace(")", `, ${alpha})`).replace("rgb", "rgba");
@@ -23,9 +21,7 @@ function makeConicGradient(chart, axisColors, alpha = 0.6) {
   return grad;
 }
 
-/* ==========================
-   RADAR FACTORY
-========================== */
+/* ========== RADAR FACTORY ========== */
 function makeRadar(ctx, color, data) {
   return new Chart(ctx, {
     type: "radar",
@@ -33,7 +29,7 @@ function makeRadar(ctx, color, data) {
       labels: ["Power", "Speed", "Trick", "Recovery", "Defense"],
       datasets: [{
         data,
-        backgroundColor: hexToRGBA(color, 0.4),
+        backgroundColor: hexToRGBA(color, 0.45),
         borderColor: color,
         borderWidth: 2,
         pointBackgroundColor: "#fff",
@@ -43,15 +39,14 @@ function makeRadar(ctx, color, data) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      animation: { duration: 200 },
       scales: {
         r: {
           grid: { display: false },
           angleLines: { color: "#6db5c0" },
           ticks: { display: false },
           pointLabels: { color: "transparent" },
-          min: 0,         // hard base min
-          max: 10         // hard base max (we'll update this globally)
+          min: 0,
+          max: 10 // base out of 10
         }
       },
       plugins: { legend: { display: false } }
@@ -59,9 +54,7 @@ function makeRadar(ctx, color, data) {
   });
 }
 
-/* ==========================
-   DOM REFERENCES
-========================== */
+/* ========== DOM REFERENCES ========== */
 const chartArea = document.getElementById("chartArea");
 const addChartBtn = document.getElementById("addChartBtn");
 const chartButtons = document.getElementById("chartButtons");
@@ -94,33 +87,30 @@ const nameInput = document.getElementById("nameInput");
 const abilityInput = document.getElementById("abilityInput");
 const levelInput = document.getElementById("levelInput");
 
-/* ==========================
-   SHARED SCALE
-========================== */
+/* ========== GLOBAL SCALE HANDLING ========== */
 function getGlobalMax() {
-  let m = 10; // base
+  let maxVal = 10;
   charts.forEach(c => {
-    const local = Math.max(...c.stats);
-    if (local > m) m = local;
+    const localMax = Math.max(...c.stats);
+    if (localMax > maxVal) maxVal = localMax;
   });
-  // snap up a bit for headroom
-  return Math.max(10, Math.ceil(m));
+  return Math.ceil(maxVal);
 }
 
-function applyGlobalScale(toMax) {
+function updateGlobalScale() {
+  const newMax = getGlobalMax();
   charts.forEach(c => {
-    c.chart.options.scales.r.max = toMax;
+    c.chart.options.scales.r.min = 0;
+    c.chart.options.scales.r.max = newMax < 10 ? 10 : newMax;
     c.chart.update();
   });
   if (radar2Ready && radar2) {
-    radar2.options.scales.r.max = toMax;
+    radar2.options.scales.r.max = newMax < 10 ? 10 : newMax;
     radar2.update();
   }
 }
 
-/* ==========================
-   INITIALIZATION
-========================== */
+/* ========== INIT ========== */
 window.addEventListener("load", () => {
   const ctx = document.getElementById("radarChart1").getContext("2d");
   const base = makeRadar(ctx, "#92dfec", [0, 0, 0, 0, 0]);
@@ -132,14 +122,11 @@ window.addEventListener("load", () => {
     multi: false,
     axis: axisColorPickers.map(p => p.value)
   });
-  // make sure base scale is applied on load
-  applyGlobalScale(10);
   updateInputs();
+  updateGlobalScale();
 });
 
-/* ==========================
-   INPUT SYNC
-========================== */
+/* ========== INPUT SYNC ========== */
 function updateInputs(index = activeChart) {
   const c = charts[index];
   [powerInput, speedInput, trickInput, recoveryInput, defenseInput].forEach((input, i) => (input.value = c.stats[i]));
@@ -149,9 +136,7 @@ function updateInputs(index = activeChart) {
   axisColorPickers.forEach((p, i) => (p.value = c.axis[i]));
 }
 
-/* ==========================
-   ADD / SELECT CHARTS
-========================== */
+/* ========== ADD / SELECT CHARTS ========== */
 function addChart() {
   const newCanvas = document.createElement("canvas");
   newCanvas.classList.add("stacked-chart");
@@ -177,21 +162,18 @@ function addChart() {
   btn.addEventListener("click", () => selectChart(i));
   chartButtons.appendChild(btn);
 
-  // keep every chart on the same scale when adding
-  applyGlobalScale(getGlobalMax());
+  updateGlobalScale();
   selectChart(i);
 }
 
 function selectChart(index) {
   activeChart = index;
 
-  // Highlight selected button
   chartButtons.querySelectorAll("button").forEach((b, i) => {
     b.style.backgroundColor = i === index ? "#6db5c0" : "#92dfec";
     b.style.color = i === index ? "white" : "black";
   });
 
-  // Bring selected canvas to front and brighten it
   charts.forEach((c, i) => {
     c.canvas.style.zIndex = i === index ? "2" : "1";
     c.chart.canvas.style.opacity = i === index ? "1" : "0.35";
@@ -200,9 +182,7 @@ function selectChart(index) {
   updateInputs(index);
 }
 
-/* ==========================
-   UPDATE ACTIVE CHART + SCALE
-========================== */
+/* ========== UPDATE CHARTS + SCALE ========== */
 function refreshActive() {
   const c = charts[activeChart];
   c.stats = [
@@ -215,12 +195,8 @@ function refreshActive() {
   c.color = colorPicker.value;
   c.axis = axisColorPickers.map(p => p.value);
 
-  // Compute and apply shared scale
-  const max = getGlobalMax();
-  applyGlobalScale(max);
+  updateGlobalScale();
 
-  // Update fills and borders for ALL charts (not only active),
-  // but keep each chart's own colors/multi.
   charts.forEach(obj => {
     const fill = obj.multi
       ? makeConicGradient(obj.chart, obj.axis, 0.45)
@@ -232,15 +208,10 @@ function refreshActive() {
   });
 }
 
-/* ==========================
-   EVENT LISTENERS
-========================== */
+/* ========== EVENT LISTENERS ========== */
 addChartBtn.addEventListener("click", addChart);
-
-// Any change in these triggers a recalculation + redraw + rescale
 [multiColorBtn, colorPicker, powerInput, speedInput, trickInput, recoveryInput, defenseInput]
   .forEach(el => el.addEventListener("input", refreshActive));
-
 axisColorPickers.forEach(p => p.addEventListener("input", refreshActive));
 
 multiColorBtn.addEventListener("click", () => {
@@ -251,9 +222,7 @@ multiColorBtn.addEventListener("click", () => {
   refreshActive();
 });
 
-/* ==========================
-   POPUP (uses same shared scale)
-========================== */
+/* ========== POPUP ========== */
 viewBtn.addEventListener("click", () => {
   const c = charts[activeChart];
   overlay.classList.remove("hidden");
@@ -268,11 +237,11 @@ viewBtn.addEventListener("click", () => {
       radar2 = makeRadar(ctx2, c.color, c.stats);
       radar2Ready = true;
     }
-    const sharedMax = getGlobalMax();
     const fill = c.multi ? makeConicGradient(radar2, c.axis, 0.45) : hexToRGBA(c.color, 0.4);
+    const sharedMax = getGlobalMax();
 
     radar2.options.scales.r.min = 0;
-    radar2.options.scales.r.max = sharedMax; // force same scale
+    radar2.options.scales.r.max = sharedMax < 10 ? 10 : sharedMax;
     radar2.data.datasets[0].data = c.stats;
     radar2.data.datasets[0].borderColor = c.color;
     radar2.data.datasets[0].backgroundColor = fill;
