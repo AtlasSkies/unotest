@@ -115,12 +115,25 @@ input[type="number"], input[type="text"] {
   font-family: Candara;
 }
 
-input[type="color"] {
-  border: none;
-  background: none;
-  width: 60px;
+/* Main color picker and Transparency slider width */
+input[type="color"], input[type="range"] {
+  width: 120px;
   height: 40px;
   cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+/* Multi-color pickers for specific axis */
+.axisColor {
+  /* Set explicit small size for multi-color inputs */
+  width: 30px !important; 
+  height: 25px !important;
+  border: none;
+  cursor: pointer;
+  margin-left: 6px;
+  border-radius: 4px;
 }
 
 button {
@@ -161,7 +174,7 @@ button:hover {
 }
 
 .hidden {
-  display: none !important; /* Use !important to override other display properties */
+  display: none !important; 
 }
 
 .character-box {
@@ -233,16 +246,6 @@ button:hover {
   padding: 6px 10px;
   cursor: pointer;
   font-weight: bold;
-}
-
-/* --- AXIS COLOR PICKERS (NEW) --- */
-.axisColor {
-  width: 30px;
-  height: 25px;
-  border: none;
-  cursor: pointer;
-  margin-left: 6px;
-  border-radius: 4px;
 }
 
 /* === MOBILE LAYOUT FOR VIEW CHARACTER CHART (Dynamic Height) === */
