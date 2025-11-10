@@ -30,7 +30,7 @@ function getAxisColors() {
 
 /* === PLUGINS === */
 
-// Plugin to draw colored wedges (for multicolor mode)
+// ✅ Updated gradient wedge fill plugin
 const segmentedFillPlugin = {
     id: 'segmentedFill',
     beforeDatasetsDraw(chart, args, options) {
@@ -45,19 +45,25 @@ const segmentedFillPlugin = {
         const colors = getAxisColors();
 
         ctx.save();
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.9;
 
         for (let i = 0; i < N; i++) {
             const pt1 = dataPoints[i];
             const pt2 = dataPoints[(i + 1) % N];
-            const solidFillColor = hexToRGBA(colors[i], 1.0);
+            const c1 = hexToRGBA(colors[i], 1.0);
+            const c2 = hexToRGBA(colors[(i + 1) % N], 1.0);
+
+            // Create a linear gradient between the wedge edges
+            const grad = ctx.createLinearGradient(pt1.x, pt1.y, pt2.x, pt2.y);
+            grad.addColorStop(0, c1);
+            grad.addColorStop(1, c2);
 
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(pt1.x, pt1.y);
             ctx.lineTo(pt2.x, pt2.y);
             ctx.closePath();
-            ctx.fillStyle = solidFillColor;
+            ctx.fillStyle = grad;
             ctx.fill();
         }
 
@@ -317,7 +323,7 @@ function updateCharts() {
     ];
 
     const maxVal = Math.max(...vals, 10);
-    const scaleMultiplier = 1.0; // adjust if needed (1.2 = slightly larger)
+    const scaleMultiplier = 1.0;
     const scaledVals = vals.map(v => v * scaleMultiplier);
 
     chartColor = colorPicker.value || chartColor;
