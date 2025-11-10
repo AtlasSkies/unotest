@@ -1,4 +1,4 @@
-let charts = [];
+let charts = [];          // [{ chart, canvas, color, stats[5], multi, axis[5] }]
 let activeChart = 0;
 let radar2, radar2Ready = false;
 
@@ -6,6 +6,8 @@ let radar2, radar2Ready = false;
    UTILITIES
 ========================== */
 function hexToRGBA(hex, alpha) {
+  if (!hex) hex = "#92dfec";
+  if (hex.startsWith("rgb")) return hex.replace(")", `, ${alpha})`).replace("rgb", "rgba");
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -13,8 +15,8 @@ function hexToRGBA(hex, alpha) {
 }
 
 function makeConicGradient(chart, axisColors, alpha = 0.6) {
-  const ctx = chart.ctx;
   const r = chart.scales.r;
+  const ctx = chart.ctx;
   const grad = ctx.createConicGradient(-Math.PI / 2, r.xCenter, r.yCenter);
   const N = axisColors.length;
   for (let i = 0; i <= N; i++) grad.addColorStop(i / N, hexToRGBA(axisColors[i % N], alpha));
@@ -41,14 +43,15 @@ function makeRadar(ctx, color, data) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      animation: { duration: 200 },
       scales: {
         r: {
           grid: { display: false },
           angleLines: { color: "#6db5c0" },
           ticks: { display: false },
           pointLabels: { color: "transparent" },
-          suggestedMin: 0,
-          suggestedMax: 10 // base scale starts at 10
+          min: 0,         // hard base min
+          max: 10         // hard base max (we'll update this globally)
         }
       },
       plugins: { legend: { display: false } }
@@ -92,6 +95,30 @@ const abilityInput = document.getElementById("abilityInput");
 const levelInput = document.getElementById("levelInput");
 
 /* ==========================
+   SHARED SCALE
+========================== */
+function getGlobalMax() {
+  let m = 10; // base
+  charts.forEach(c => {
+    const local = Math.max(...c.stats);
+    if (local > m) m = local;
+  });
+  // snap up a bit for headroom
+  return Math.max(10, Math.ceil(m));
+}
+
+function applyGlobalScale(toMax) {
+  charts.forEach(c => {
+    c.chart.options.scales.r.max = toMax;
+    c.chart.update();
+  });
+  if (radar2Ready && radar2) {
+    radar2.options.scales.r.max = toMax;
+    radar2.update();
+  }
+}
+
+/* ==========================
    INITIALIZATION
 ========================== */
 window.addEventListener("load", () => {
@@ -99,12 +126,14 @@ window.addEventListener("load", () => {
   const base = makeRadar(ctx, "#92dfec", [0, 0, 0, 0, 0]);
   charts.push({
     chart: base,
+    canvas: ctx.canvas,
     color: "#92dfec",
     stats: [0, 0, 0, 0, 0],
     multi: false,
-    axis: axisColorPickers.map(p => p.value),
-    canvas: ctx.canvas
+    axis: axisColorPickers.map(p => p.value)
   });
+  // make sure base scale is applied on load
+  applyGlobalScale(10);
   updateInputs();
 });
 
@@ -127,33 +156,42 @@ function addChart() {
   const newCanvas = document.createElement("canvas");
   newCanvas.classList.add("stacked-chart");
   chartArea.appendChild(newCanvas);
+
   const ctx = newCanvas.getContext("2d");
   const hue = Math.floor(Math.random() * 360);
   const clr = `hsl(${hue}, 70%, 55%)`;
   const c = makeRadar(ctx, clr, [0, 0, 0, 0, 0]);
+
   charts.push({
     chart: c,
+    canvas: newCanvas,
     color: clr,
     stats: [0, 0, 0, 0, 0],
     multi: false,
-    axis: axisColorPickers.map(p => p.value),
-    canvas: newCanvas
+    axis: axisColorPickers.map(p => p.value)
   });
+
   const i = charts.length - 1;
   const btn = document.createElement("button");
   btn.textContent = `Select Chart ${i + 1}`;
   btn.addEventListener("click", () => selectChart(i));
   chartButtons.appendChild(btn);
+
+  // keep every chart on the same scale when adding
+  applyGlobalScale(getGlobalMax());
   selectChart(i);
 }
 
 function selectChart(index) {
   activeChart = index;
+
+  // Highlight selected button
   chartButtons.querySelectorAll("button").forEach((b, i) => {
     b.style.backgroundColor = i === index ? "#6db5c0" : "#92dfec";
     b.style.color = i === index ? "white" : "black";
   });
 
+  // Bring selected canvas to front and brighten it
   charts.forEach((c, i) => {
     c.canvas.style.zIndex = i === index ? "2" : "1";
     c.chart.canvas.style.opacity = i === index ? "1" : "0.35";
@@ -163,19 +201,7 @@ function selectChart(index) {
 }
 
 /* ==========================
-   SHARED SCALE LOGIC
-========================== */
-function getGlobalMax() {
-  let globalMax = 10; // base scale
-  charts.forEach(c => {
-    const localMax = Math.max(...c.stats);
-    if (localMax > globalMax) globalMax = localMax;
-  });
-  return Math.ceil(globalMax);
-}
-
-/* ==========================
-   UPDATE ACTIVE CHART
+   UPDATE ACTIVE CHART + SCALE
 ========================== */
 function refreshActive() {
   const c = charts[activeChart];
@@ -189,19 +215,20 @@ function refreshActive() {
   c.color = colorPicker.value;
   c.axis = axisColorPickers.map(p => p.value);
 
-  // Determine shared scale
-  const globalMax = getGlobalMax();
+  // Compute and apply shared scale
+  const max = getGlobalMax();
+  applyGlobalScale(max);
 
-  // Update all charts to share the same scale
-  charts.forEach(chartObj => {
-    const fill = chartObj.multi
-      ? makeConicGradient(chartObj.chart, chartObj.axis, 0.45)
-      : hexToRGBA(chartObj.color, 0.4);
-    chartObj.chart.options.scales.r.suggestedMax = globalMax;
-    chartObj.chart.data.datasets[0].data = chartObj.stats;
-    chartObj.chart.data.datasets[0].borderColor = chartObj.color;
-    chartObj.chart.data.datasets[0].backgroundColor = fill;
-    chartObj.chart.update();
+  // Update fills and borders for ALL charts (not only active),
+  // but keep each chart's own colors/multi.
+  charts.forEach(obj => {
+    const fill = obj.multi
+      ? makeConicGradient(obj.chart, obj.axis, 0.45)
+      : hexToRGBA(obj.color, 0.4);
+    obj.chart.data.datasets[0].data = obj.stats;
+    obj.chart.data.datasets[0].borderColor = obj.color;
+    obj.chart.data.datasets[0].backgroundColor = fill;
+    obj.chart.update();
   });
 }
 
@@ -209,8 +236,11 @@ function refreshActive() {
    EVENT LISTENERS
 ========================== */
 addChartBtn.addEventListener("click", addChart);
+
+// Any change in these triggers a recalculation + redraw + rescale
 [multiColorBtn, colorPicker, powerInput, speedInput, trickInput, recoveryInput, defenseInput]
   .forEach(el => el.addEventListener("input", refreshActive));
+
 axisColorPickers.forEach(p => p.addEventListener("input", refreshActive));
 
 multiColorBtn.addEventListener("click", () => {
@@ -222,7 +252,7 @@ multiColorBtn.addEventListener("click", () => {
 });
 
 /* ==========================
-   POPUP VIEW
+   POPUP (uses same shared scale)
 ========================== */
 viewBtn.addEventListener("click", () => {
   const c = charts[activeChart];
@@ -238,15 +268,16 @@ viewBtn.addEventListener("click", () => {
       radar2 = makeRadar(ctx2, c.color, c.stats);
       radar2Ready = true;
     }
-
-    const globalMax = getGlobalMax();
+    const sharedMax = getGlobalMax();
     const fill = c.multi ? makeConicGradient(radar2, c.axis, 0.45) : hexToRGBA(c.color, 0.4);
-    radar2.options.scales.r.suggestedMax = globalMax;
+
+    radar2.options.scales.r.min = 0;
+    radar2.options.scales.r.max = sharedMax; // force same scale
     radar2.data.datasets[0].data = c.stats;
     radar2.data.datasets[0].borderColor = c.color;
     radar2.data.datasets[0].backgroundColor = fill;
     radar2.update();
-  }, 200);
+  }, 150);
 });
 
 closeBtn.addEventListener("click", () => overlay.classList.add("hidden"));
