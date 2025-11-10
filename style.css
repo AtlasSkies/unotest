@@ -1,4 +1,4 @@
-/* === GENERAL PAGE STYLING === */
+/* === GENERAL PAGE LAYOUT === */
 body {
   font-family: Candara, sans-serif;
   background: #f0f8fc;
@@ -95,7 +95,7 @@ h1 {
   font-family: Candara;
 }
 
-/* === INPUT SECTION === */
+/* === INPUT SECTIONS === */
 .inputs {
   display: flex;
   flex-direction: column;
@@ -153,14 +153,15 @@ button:hover {
   height: clamp(300px, 40vw, 500px);
 }
 
-/* stacked radar charts layer cleanly */
+/* stacked layers for multiple radar charts */
 .stacked-chart {
   position: absolute;
   top: 0;
   left: 0;
+  transition: opacity 0.25s ease;
 }
 
-/* === AXIS COLOR PICKERS (hidden in single-color mode) === */
+/* === MULTICOLOR AXIS PICKERS === */
 #axisColors {
   display: none;
   flex-direction: column;
@@ -233,6 +234,20 @@ button:hover {
   border-radius: 6px;
 }
 
+/* === WATERMARK === */
+.popup-watermark {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: Candara, sans-serif;
+  color: rgba(0, 0, 0, 0.04); /* subtle transparency */
+  user-select: none;
+  pointer-events: none;
+}
+
+/* === TEXT BOX === */
 .text-box {
   position: absolute;
   bottom: -45px;
@@ -244,6 +259,7 @@ button:hover {
   text-align: center;
 }
 
+/* === OVERLAY CHART === */
 .overlay-chart {
   display: flex;
   justify-content: center;
@@ -252,7 +268,6 @@ button:hover {
   height: clamp(280px, 40vw, 450px);
 }
 
-/* === DOWNLOAD BUTTON === */
 #downloadBtn {
   position: absolute;
   bottom: 10px;
@@ -265,20 +280,7 @@ button:hover {
   font-weight: bold;
 }
 
-/* === WATERMARK === */
-.popup-watermark {
-  position: absolute;
-  bottom: 12px;
-  left: 14px;
-  font-size: 14px;
-  font-weight: bold;
-  font-family: Candara, sans-serif;
-  color: rgba(0, 0, 0, 0.03); /* subtle and see-through */
-  user-select: none;
-  pointer-events: none;
-}
-
-/* === MOBILE LAYOUT === */
+/* === MOBILE RESPONSIVE === */
 @media (max-width: 768px) {
   .character-box {
     flex-direction: column;
@@ -293,6 +295,9 @@ button:hover {
     width: 70vw;
     height: auto;
     max-height: 35vh;
+    object-fit: cover;
+    border: 2px solid #493e3b;
+    border-radius: 8px;
   }
 
   .text-box {
@@ -323,10 +328,4 @@ button:hover {
     right: 12px;
     font-size: 26px;
   }
-}
-.stacked-chart{position:absolute;top:0;left:0;}
-.popup-watermark{
-  position:absolute;bottom:12px;left:14px;
-  font-size:14px;font-weight:bold;font-family:Candara,sans-serif;
-  color:rgba(0,0,0,0.03);pointer-events:none;user-select:none;
 }
