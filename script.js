@@ -223,7 +223,7 @@ multiColorBtn.addEventListener("click", () => {
   refreshActive();
 });
 
-/* ===== Popup (overlap all charts, oldest at bottom) ===== */
+/* ===== Popup (overlap all charts, oldest at bottom, newest on top) ===== */
 viewBtn.addEventListener("click", () => {
   overlay.classList.remove("hidden");
   overlayImg.src = uploadedImg.src;
@@ -235,14 +235,14 @@ viewBtn.addEventListener("click", () => {
     const ctx2 = document.getElementById("radarChart2").getContext("2d");
     const globalMax = getGlobalMax();
 
-    // Order so that first chart is bottom, newest top
+    // IMPORTANT: keep dataset order EXACTLY as charts[] (oldest first, newest last → drawn on top)
     const datasets = charts.map(obj => ({
       data: obj.stats.slice(),
-      backgroundColor: obj.multi ? hexToRGBA(obj.color, FILL_ALPHA) : hexToRGBA(obj.color, FILL_ALPHA),
+      backgroundColor: hexToRGBA(obj.color, FILL_ALPHA), // temp; gradients applied after layout
       borderColor: obj.color,
       borderWidth: 2,
       pointRadius: 0
-    })).reverse();
+    }));
 
     if (!radar2Ready) {
       radar2 = new Chart(ctx2, {
@@ -276,10 +276,10 @@ viewBtn.addEventListener("click", () => {
       radar2.update();
     }
 
-    // Fix multi-color gradient fills
+    // After layout, swap in conic gradients for the datasets that are multi-color
     requestAnimationFrame(() => {
       radar2.data.datasets.forEach((ds, i) => {
-        const src = charts[charts.length - 1 - i]; // reversed order
+        const src = charts[i]; // SAME INDEX — order preserved, newest last is on top
         ds.backgroundColor = src.multi
           ? makeConicGradient(radar2, src.axis, FILL_ALPHA)
           : hexToRGBA(src.color, FILL_ALPHA);
