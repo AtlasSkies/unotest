@@ -146,6 +146,7 @@ button:hover {
   height: clamp(300px, 40vw, 500px);
 }
 
+/* --- OVERLAY STYLES --- */
 .overlay {
   position: fixed;
   top: 0;
@@ -160,7 +161,7 @@ button:hover {
 }
 
 .hidden {
-  display: none;
+  display: none !important; /* Use !important to override other display properties */
 }
 
 .character-box {
@@ -234,6 +235,16 @@ button:hover {
   font-weight: bold;
 }
 
+/* --- AXIS COLOR PICKERS (NEW) --- */
+.axisColor {
+  width: 30px;
+  height: 25px;
+  border: none;
+  cursor: pointer;
+  margin-left: 6px;
+  border-radius: 4px;
+}
+
 /* === MOBILE LAYOUT FOR VIEW CHARACTER CHART (Dynamic Height) === */
 @media (max-width: 768px) {
   .character-box {
@@ -286,16 +297,3 @@ button:hover {
     font-size: 26px;
   }
 }
-.axisColor {
-  width: 30px;
-  height: 25px;
-  border: none;
-  cursor: pointer;
-  margin-left: 6px;
-  border-radius: 4px;
-}
-
-.hidden {
-  display: none !important;
-}
-
