@@ -234,6 +234,9 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
             labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
             datasets: [{
                 data: [0, 0, 0, 0, 0],
+                // FIX: Ensure fill is always true for the radar area to be drawn,
+                // which is required for custom fill plugins to work correctly.
+                fill: true, 
                 backgroundColor: hexToRGBA(chartColor, DEFAULT_FILL_OPACITY),
                 borderColor: FIXED_BORDER_COLOR,
                 borderWidth: 2,
@@ -307,6 +310,7 @@ window.addEventListener('load', () => {
     const ctx1 = document.getElementById('radarChart1').getContext('2d');
     radar1 = makeRadar(ctx1, true, false);
 
+    // Initialize all axis color pickers to the default chart color
     Object.values(axisColors).forEach(input => {
         input.value = chartColor;
     });
@@ -340,13 +344,17 @@ function updateCharts() {
 
         if (isMulticolor) {
             chart.options.plugins.segmentedFill.enabled = true;
-            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)';
+            // Set the main chart background to fully transparent so the custom fill shows through
+            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)'; 
         } else {
             chart.options.plugins.segmentedFill.enabled = false;
             Object.values(axisColors).forEach(input => {
-                input.value = chartColor;
-                input.dataset.userSelected = false;
+                // Only reset the axis colors if the user hasn't selected a custom color
+                if (!input.dataset.userSelected) {
+                    input.value = chartColor;
+                }
             });
+            // Use the solid color fill
             chart.data.datasets[0].backgroundColor = solidFill;
         }
 
@@ -365,16 +373,21 @@ inputElements.forEach(el => {
 
 Object.values(axisColors).forEach(input => {
     input.addEventListener('input', () => {
-        input.dataset.userSelected = true;
+        // Mark that the user has manually selected a color for this axis
+        input.dataset.userSelected = true; 
         updateCharts();
     });
 });
 
 colorPicker.addEventListener('input', () => {
     chartColor = colorPicker.value;
+    // If not in multicolor mode, update all axis colors to match the main color picker
     if (!isMulticolor) {
         Object.values(axisColors).forEach(input => {
-            input.value = chartColor;
+            // Only overwrite if the user didn't manually set an axis color
+            if (!input.dataset.userSelected) {
+                input.value = chartColor;
+            }
         });
     }
     updateCharts();
@@ -401,6 +414,7 @@ multiBtn.addEventListener('click', () => {
         multiBtn.textContent = 'Multicolor';
         axisColorInputs.forEach(input => input.classList.add('hidden'));
         Object.values(axisColors).forEach(input => {
+            // Reset axis colors back to the main chart color and remove user selection flag
             input.value = chartColor;
             input.dataset.userSelected = false;
         });
@@ -424,10 +438,12 @@ viewBtn.addEventListener('click', () => {
 
         const ctx2 = document.getElementById('radarChart2').getContext('2d');
         if (!radar2Ready) {
+            // Calculate center for the fixed center plugin on the overlay chart
             const center = { x: targetSize / 2, y: targetSize / 2 };
             radar2 = makeRadar(ctx2, false, true, center);
             radar2Ready = true;
         } else {
+            // Reset size if chart already exists
             radar2.resize();
         }
         updateCharts();
@@ -438,10 +454,12 @@ closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
 /* === DOWNLOAD === */
 downloadBtn.addEventListener('click', () => {
+    // Hide buttons before screenshot
     downloadBtn.style.visibility = 'hidden';
     closeBtn.style.visibility = 'hidden';
 
     const box = document.getElementById('characterBox');
+    // Use scale: 3 for high-resolution image output
     html2canvas(box, { scale: 3 }).then(canvas => {
         const link = document.createElement('a');
         const cleanName = (nameInput.value || 'Unnamed').replace(/\s+/g, '_');
@@ -449,6 +467,7 @@ downloadBtn.addEventListener('click', () => {
         link.href = canvas.toDataURL('image/png');
         link.click();
 
+        // Restore button visibility
         downloadBtn.style.visibility = 'visible';
         closeBtn.style.visibility = 'visible';
     });
