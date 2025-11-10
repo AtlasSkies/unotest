@@ -28,13 +28,25 @@ function getAxisColors() {
     ];
 }
 
+/* New function to create a gradient for a segment */
+function createSegmentGradient(ctx, cx, cy, p1, p2, color1, color2) {
+    // Determine the gradient line (e.g., from the center out along the bisector, or across the base)
+    // For a smooth transition between wedges, we'll create a simple linear gradient
+    // from the starting point (p1) to the ending point (p2) of the arc.
+    const gradient = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+    gradient.addColorStop(0, hexToRGBA(color1, 0.85)); // Start color (with opacity)
+    gradient.addColorStop(1, hexToRGBA(color2, 0.85)); // End color (with opacity)
+    return gradient;
+}
+
 /* === PLUGINS === */
 
-// ✅ Gradient Wedge Fill Plugin
+// Plugin to draw colored wedges (for multicolor mode) - MODIFIED
 const segmentedFillPlugin = {
     id: 'segmentedFill',
     beforeDatasetsDraw(chart, args, options) {
         if (!options.enabled || chart.data.datasets.length === 0) return;
+
         const ctx = chart.ctx;
         const r = chart.scales.r;
         const meta = chart.getDatasetMeta(0);
@@ -44,26 +56,30 @@ const segmentedFillPlugin = {
         const colors = getAxisColors();
 
         ctx.save();
-        ctx.globalAlpha = 0.9;
-
+        
         for (let i = 0; i < N; i++) {
             const pt1 = dataPoints[i];
-            const pt2 = dataPoints[(i + 1) % N];
-            const c1 = hexToRGBA(colors[i], 1.0);
-            const c2 = hexToRGBA(colors[(i + 1) % N], 1.0);
+            // The next point is the wrap-around point for the last wedge
+            const pt2 = dataPoints[(i + 1) % N]; 
+            
+            // Current wedge color (start color of the gradient)
+            const color1 = colors[i];
+            // Next wedge color (end color of the gradient)
+            const color2 = colors[(i + 1) % N]; 
 
-            const grad = ctx.createLinearGradient(pt1.x, pt1.y, pt2.x, pt2.y);
-            grad.addColorStop(0, c1);
-            grad.addColorStop(1, c2);
-
+            // Create a gradient that transitions from color1 to color2 across the segment
+            const gradient = createSegmentGradient(ctx, cx, cy, pt1, pt2, color1, color2);
+            
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(pt1.x, pt1.y);
             ctx.lineTo(pt2.x, pt2.y);
             ctx.closePath();
-            ctx.fillStyle = grad;
+            
+            ctx.fillStyle = gradient; // Use the gradient
             ctx.fill();
         }
+
         ctx.restore();
     },
 };
@@ -131,7 +147,6 @@ const radarGridPlugin = {
     }
 };
 
-// Center alignment plugin
 const fixedCenterPlugin = {
     id: 'fixedCenter',
     beforeLayout(chart) {
@@ -145,7 +160,6 @@ const fixedCenterPlugin = {
     }
 };
 
-// Axis labels with outlines
 const outlinedLabelsPlugin = {
     id: 'outlinedLabels',
     afterDraw(chart) {
@@ -169,12 +183,6 @@ const outlinedLabelsPlugin = {
             const angle = base + (i * 2 * Math.PI / labels.length);
             const x = cx + baseRadius * Math.cos(angle);
             let y = cy + baseRadius * Math.sin(angle);
-
-            // 🟣 Move Defense and Speed up for overlay chart
-            if (chart.config.options.customBackground.enabled) {
-                if (i === 1 || i === 4) y -= 25;
-            }
-
             if (i === 0) y -= 5;
             ctx.strokeText(label, x, y);
             ctx.fillText(label, x, y);
@@ -183,7 +191,6 @@ const outlinedLabelsPlugin = {
     }
 };
 
-// Display stat values next to axis titles
 const inputValuePlugin = {
     id: 'inputValuePlugin',
     afterDraw(chart) {
@@ -210,7 +217,6 @@ const inputValuePlugin = {
             const angle = base + (i * 2 * Math.PI / labels.length);
             const x = cx + (baseRadius + offset) * Math.cos(angle);
             let y = cy + (baseRadius + offset) * Math.sin(angle);
-
             if (i === 0) y -= 20;
             else if (i === 1) y += 10;
             else if (i === 4) y += 10;
@@ -223,24 +229,6 @@ const inputValuePlugin = {
     }
 };
 
-// ✅ "AS" watermark plugin (5% opacity, bottom-left)
-const watermarkPlugin = {
-    id: 'watermarkPlugin',
-    afterDraw(chart) {
-        if (!chart.config.options.customBackground.enabled) return;
-        const ctx = chart.ctx;
-        const { chartArea } = chart;
-        ctx.save();
-        ctx.globalAlpha = 0.05;
-        ctx.font = '12px Candara';
-        ctx.fillStyle = '#000';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText('AS', chartArea.left + 10, chartArea.bottom - 10);
-        ctx.restore();
-    }
-};
-
 /* === CHART CREATOR === */
 function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter = null) {
     const plugins = [
@@ -248,8 +236,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
         radarGridPlugin,
         outlinedLabelsPlugin,
         inputValuePlugin,
-        segmentedFillPlugin,
-        watermarkPlugin
+        segmentedFillPlugin
     ];
 
     return new Chart(ctx, {
@@ -349,7 +336,7 @@ function updateCharts() {
     ];
 
     const maxVal = Math.max(...vals, 10);
-    const scaleMultiplier = 1.0;
+    const scaleMultiplier = 1.0; // adjust if needed (1.2 = slightly larger)
     const scaledVals = vals.map(v => v * scaleMultiplier);
 
     chartColor = colorPicker.value || chartColor;
@@ -368,7 +355,8 @@ function updateCharts() {
 
         if (isMulticolor) {
             chart.options.plugins.segmentedFill.enabled = true;
-            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)';
+            // Set background to transparent when using the segmented fill plugin
+            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)'; 
         } else {
             chart.options.plugins.segmentedFill.enabled = false;
             Object.values(axisColors).forEach(input => {
