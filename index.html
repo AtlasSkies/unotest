@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UnOrdinary Ability Chart Maker</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
@@ -36,7 +36,11 @@
         <label>Defense: <input type="number" id="defenseInput" step="0.1" min="0"></label>
         <label>Ability Color: <input type="color" id="colorPicker" value="#92dfec"></label>
 
-        <button id="multiColorBtn">Multi-color</button>
+        <div class="button-row">
+          <button id="multiColorBtn">Multi-color</button>
+          <button id="viewBtn">View Character Chart</button>
+        </div>
+
         <div id="axisColors">
           <label>Power Color: <input type="color" id="powerColor" value="#92dfec"></label>
           <label>Speed Color: <input type="color" id="speedColor" value="#92dfec"></label>
@@ -44,13 +48,18 @@
           <label>Recovery Color: <input type="color" id="recoveryColor" value="#92dfec"></label>
           <label>Defense Color: <input type="color" id="defenseColor" value="#92dfec"></label>
         </div>
-
-        <button id="viewBtn">View Character Chart</button>
       </div>
     </div>
 
-    <div class="chart-area">
-      <canvas id="radarChart1"></canvas>
+    <div class="right">
+      <div class="chart-header">
+        <button id="addChartBtn">+ Add Chart</button>
+        <div id="chartButtons" class="chart-buttons"></div>
+      </div>
+      <div class="chart-area" id="chartArea">
+        <!-- Base canvas -->
+        <canvas id="radarChart1" class="stacked-chart"></canvas>
+      </div>
     </div>
   </div>
 
@@ -72,7 +81,9 @@
         <canvas id="radarChart2"></canvas>
       </div>
 
+      <!-- Watermark -->
       <div class="popup-watermark">AS</div>
+
       <button id="downloadBtn">Download Character Chart</button>
     </div>
   </div>
