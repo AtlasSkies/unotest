@@ -286,3 +286,16 @@ button:hover {
     font-size: 26px;
   }
 }
+.axisColor {
+  width: 30px;
+  height: 25px;
+  border: none;
+  cursor: pointer;
+  margin-left: 6px;
+  border-radius: 4px;
+}
+
+.hidden {
+  display: none !important;
+}
+
