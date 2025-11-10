@@ -2,7 +2,7 @@ let charts = []; // [{ chart, canvas, color, stats[5], multi, axis[5] }]
 let activeChart = 0;
 let radar2, radar2Ready = false;
 
-const FILL_ALPHA = 0.65; // keep the same transparency whether 1 or many charts
+const FILL_ALPHA = 0.65; // uniform fill opacity
 
 /* ===== Utilities ===== */
 function hexToRGBA(hex, alpha) {
@@ -48,7 +48,7 @@ function makeRadar(ctx, color, data) {
           ticks: { display: false },
           pointLabels: { color: "transparent" },
           min: 0,
-          max: 10 // base scale always out of 10 (can expand)
+          max: 10 // base out of 10, expands if >10
         }
       },
       plugins: { legend: { display: false } }
@@ -89,7 +89,7 @@ const nameInput = document.getElementById("nameInput");
 const abilityInput = document.getElementById("abilityInput");
 const levelInput = document.getElementById("levelInput");
 
-/* ===== Shared scale (global) ===== */
+/* ===== Shared scale ===== */
 function getGlobalMax() {
   let maxVal = 10;
   charts.forEach(c => {
@@ -172,23 +172,18 @@ function addChart() {
 
 function selectChart(index) {
   activeChart = index;
-
-  // Highlight active button only
   chartButtons.querySelectorAll("button").forEach((b, i) => {
     b.style.backgroundColor = i === index ? "#6db5c0" : "#92dfec";
     b.style.color = i === index ? "white" : "black";
   });
-
-  // Bring selected to front BUT never change opacity
   charts.forEach((c, i) => {
     c.canvas.style.zIndex = i === index ? "2" : "1";
-    c.chart.canvas.style.opacity = "1"; // hard guarantee: never dim
+    c.chart.canvas.style.opacity = "1"; // never dim
   });
-
   updateInputs(index);
 }
 
-/* ===== Update active + redraw all ===== */
+/* ===== Update active + redraw ===== */
 function refreshActive() {
   const c = charts[activeChart];
   c.stats = [
@@ -228,7 +223,7 @@ multiColorBtn.addEventListener("click", () => {
   refreshActive();
 });
 
-/* ===== Popup (overlap all charts) ===== */
+/* ===== Popup (overlap all charts, oldest at bottom) ===== */
 viewBtn.addEventListener("click", () => {
   overlay.classList.remove("hidden");
   overlayImg.src = uploadedImg.src;
@@ -240,14 +235,14 @@ viewBtn.addEventListener("click", () => {
     const ctx2 = document.getElementById("radarChart2").getContext("2d");
     const globalMax = getGlobalMax();
 
-    // Build datasets for ALL charts
+    // Order so that first chart is bottom, newest top
     const datasets = charts.map(obj => ({
       data: obj.stats.slice(),
       backgroundColor: obj.multi ? hexToRGBA(obj.color, FILL_ALPHA) : hexToRGBA(obj.color, FILL_ALPHA),
       borderColor: obj.color,
       borderWidth: 2,
       pointRadius: 0
-    }));
+    })).reverse();
 
     if (!radar2Ready) {
       radar2 = new Chart(ctx2, {
@@ -281,10 +276,10 @@ viewBtn.addEventListener("click", () => {
       radar2.update();
     }
 
-    // After initial layout, replace fills with conic gradients for multi-color charts
+    // Fix multi-color gradient fills
     requestAnimationFrame(() => {
       radar2.data.datasets.forEach((ds, i) => {
-        const src = charts[i];
+        const src = charts[charts.length - 1 - i]; // reversed order
         ds.backgroundColor = src.multi
           ? makeConicGradient(radar2, src.axis, FILL_ALPHA)
           : hexToRGBA(src.color, FILL_ALPHA);
