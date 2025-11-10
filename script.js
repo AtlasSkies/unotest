@@ -1,18 +1,11 @@
-/* =======================
-   STATE
-======================= */
-let chartList = []; // holds all radar charts stacked together
+let chartList = [];
 let radar2, radar2Ready = false;
-let chartColor = '#92dfec';
+let chartColor = "#92dfec";
 let multiColorMode = false;
-let lastAbilityColor = chartColor;
 
-/* =======================
-   HELPERS
-======================= */
 function hexToRGBA(hex, alpha) {
-  if (!hex) hex = '#92dfec';
-  if (hex.startsWith('rgb')) return hex.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+  if (!hex) hex = "#92dfec";
+  if (hex.startsWith("rgb")) return hex.replace(")", `, ${alpha})`).replace("rgb", "rgba");
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -25,32 +18,21 @@ function makeConicGradient(chart, axisColors, alpha = 0.65) {
   const cx = r.xCenter, cy = r.yCenter;
   const N = chart.data.labels.length;
   const grad = ctx.createConicGradient(-Math.PI / 2, cx, cy);
-  for (let i = 0; i <= N; i++) {
-    grad.addColorStop(i / N, hexToRGBA(axisColors[i % N], alpha));
-  }
+  for (let i = 0; i <= N; i++) grad.addColorStop(i / N, hexToRGBA(axisColors[i % N], alpha));
   return grad;
 }
 
-function computeFill(chart, abilityHex, axisPickers) {
-  if (!multiColorMode) return hexToRGBA(abilityHex, 0.45);
-  const cols = axisPickers.map(p => p.value || abilityHex);
-  return makeConicGradient(chart, cols, 0.45);
-}
-
-/* =======================
-   CHART CREATOR
-======================= */
-function makeRadar(ctx, color, data, withBackground = false) {
+function makeRadar(ctx, color, data) {
   return new Chart(ctx, {
-    type: 'radar',
+    type: "radar",
     data: {
-      labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
+      labels: ["Power", "Speed", "Trick", "Recovery", "Defense"],
       datasets: [{
         data: data || [0, 0, 0, 0, 0],
-        backgroundColor: hexToRGBA(color, 0.3),
+        backgroundColor: hexToRGBA(color, 0.35),
         borderColor: color,
         borderWidth: 2,
-        pointBackgroundColor: '#fff',
+        pointBackgroundColor: "#fff",
         pointBorderColor: color,
         pointRadius: 4
       }]
@@ -61,60 +43,41 @@ function makeRadar(ctx, color, data, withBackground = false) {
       scales: {
         r: {
           grid: { display: false },
-          angleLines: { color: '#6db5c0', lineWidth: 1 },
+          angleLines: { color: "#6db5c0", lineWidth: 1 },
           suggestedMin: 0,
           suggestedMax: 10,
           ticks: { display: false },
-          pointLabels: { color: 'transparent' }
+          pointLabels: { color: "transparent" }
         }
       },
-      layout: { padding: { top: 25, bottom: 25, left: 10, right: 10 } },
       plugins: { legend: { display: false } }
     }
   });
 }
 
-/* =======================
-   DOM ELEMENTS
-======================= */
-const addChartBtn = document.getElementById('addChartBtn');
-const chartArea = document.getElementById('chartArea');
-const colorPicker = document.getElementById('colorPicker');
-const powerInput = document.getElementById('powerInput');
-const speedInput = document.getElementById('speedInput');
-const trickInput = document.getElementById('trickInput');
-const recoveryInput = document.getElementById('recoveryInput');
-const defenseInput = document.getElementById('defenseInput');
-const axisColorPickers = [
-  document.getElementById('powerColor'),
-  document.getElementById('speedColor'),
-  document.getElementById('trickColor'),
-  document.getElementById('recoveryColor'),
-  document.getElementById('defenseColor')
-];
+// DOM elements
+const chartArea = document.getElementById("chartArea");
+const addChartBtn = document.getElementById("addChartBtn");
+const colorPicker = document.getElementById("colorPicker");
+const powerInput = document.getElementById("powerInput");
+const speedInput = document.getElementById("speedInput");
+const trickInput = document.getElementById("trickInput");
+const recoveryInput = document.getElementById("recoveryInput");
+const defenseInput = document.getElementById("defenseInput");
 
-/* =======================
-   INIT
-======================= */
-window.addEventListener('load', () => {
-  const ctx1 = document.getElementById('radarChart1').getContext('2d');
-  const baseChart = makeRadar(ctx1, chartColor, [0, 0, 0, 0, 0]);
+window.addEventListener("load", () => {
+  const ctx = document.getElementById("radarChart1").getContext("2d");
+  const baseChart = makeRadar(ctx, chartColor, [0, 0, 0, 0, 0]);
   chartList.push(baseChart);
-  updateCharts();
 });
 
-/* =======================
-   STACK NEW CHART
-======================= */
-addChartBtn.addEventListener('click', () => {
-  const newCanvas = document.createElement('canvas');
-  newCanvas.classList.add('stacked-chart');
+addChartBtn.addEventListener("click", () => {
+  const newCanvas = document.createElement("canvas");
+  newCanvas.classList.add("stacked-chart");
   chartArea.appendChild(newCanvas);
-  const ctx = newCanvas.getContext('2d');
-
-  const randomHue = Math.floor(Math.random() * 360);
-  const randomColor = `hsl(${randomHue}, 70%, 55%)`;
-
+  const ctx = newCanvas.getContext("2d");
+  const hue = Math.floor(Math.random() * 360);
+  const randColor = `hsl(${hue}, 70%, 55%)`;
   const data = [
     +powerInput.value || 0,
     +speedInput.value || 0,
@@ -122,15 +85,10 @@ addChartBtn.addEventListener('click', () => {
     +recoveryInput.value || 0,
     +defenseInput.value || 0
   ];
-
-  const newChart = makeRadar(ctx, randomColor, data);
+  const newChart = makeRadar(ctx, randColor, data);
   chartList.push(newChart);
-  updateCharts();
 });
 
-/* =======================
-   UPDATE ALL CHARTS
-======================= */
 function updateCharts() {
   const vals = [
     +powerInput.value || 0,
@@ -140,19 +98,13 @@ function updateCharts() {
     +defenseInput.value || 0
   ];
   chartColor = colorPicker.value;
-
   chartList.forEach(c => {
-    const fill = computeFill(c, chartColor, axisColorPickers);
     c.data.datasets[0].data = vals;
-    c.data.datasets[0].backgroundColor = fill;
+    c.data.datasets[0].borderColor = chartColor;
+    c.data.datasets[0].backgroundColor = hexToRGBA(chartColor, 0.35);
     c.update();
   });
 }
 
-/* =======================
-   INPUT EVENT LISTENERS
-======================= */
-[powerInput, speedInput, trickInput, recoveryInput, defenseInput, colorPicker].forEach(el => {
-  el.addEventListener('input', updateCharts);
-  el.addEventListener('change', updateCharts);
-});
+[powerInput, speedInput, trickInput, recoveryInput, defenseInput, colorPicker]
+  .forEach(el => el.addEventListener("input", updateCharts));
