@@ -38,29 +38,23 @@ const segmentedFillPlugin = {
 
         const ctx = chart.ctx;
         const r = chart.scales.r;
-        const meta = chart.getDatasetMeta(0); // Get dataset metadata
-        const dataPoints = meta.data; // Array of chart-calculated point elements
+        const meta = chart.getDatasetMeta(0);
+        const dataPoints = meta.data;
         const N = chart.data.labels.length;
         const cx = r.xCenter, cy = r.yCenter;
         const colors = getAxisColors();
 
         ctx.save();
-        // Set a global opacity for all wedges
-        ctx.globalAlpha = 0.85; 
+        ctx.globalAlpha = 0.85;
 
-        // Draw solid-filled wedges between each pair of axes
         for (let i = 0; i < N; i++) {
-            // Use the points calculated by Chart.js for the dataset line
-            const pt1 = dataPoints[i]; 
+            const pt1 = dataPoints[i];
             const pt2 = dataPoints[(i + 1) % N];
-            
-            // Use the solid color of the current axis for the wedge fill.
-            const solidFillColor = hexToRGBA(colors[i], 1.0); 
+            const solidFillColor = hexToRGBA(colors[i], 1.0);
 
             ctx.beginPath();
             ctx.moveTo(cx, cy);
-            // We use pt1.x and pt1.y which are the coordinates already computed by the chart
-            ctx.lineTo(pt1.x, pt1.y); 
+            ctx.lineTo(pt1.x, pt1.y);
             ctx.lineTo(pt2.x, pt2.y);
             ctx.closePath();
             ctx.fillStyle = solidFillColor;
@@ -71,7 +65,7 @@ const segmentedFillPlugin = {
     },
 };
 
-// Plugin to draw pentagon background and fixed spokes
+// Plugin for background and spokes
 const radarGridPlugin = {
     id: 'customPentagonBackground',
     beforeDatasetsDraw(chart) {
@@ -107,7 +101,6 @@ const radarGridPlugin = {
         const N = chart.data.labels.length, start = -Math.PI / 2;
 
         ctx.save();
-        // spokes
         ctx.beginPath();
         for (let i = 0; i < N; i++) {
             const a = start + (i * 2 * Math.PI / N);
@@ -120,7 +113,6 @@ const radarGridPlugin = {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // border
         ctx.beginPath();
         for (let i = 0; i < N; i++) {
             const a = start + (i * 2 * Math.PI / N);
@@ -234,8 +226,7 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
             labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
             datasets: [{
                 data: [0, 0, 0, 0, 0],
-                // fill: true is crucial for the area polygon to exist, even if we draw the fill with plugins
-                fill: true, 
+                fill: true,
                 backgroundColor: hexToRGBA(chartColor, DEFAULT_FILL_OPACITY),
                 borderColor: FIXED_BORDER_COLOR,
                 borderWidth: 2,
@@ -246,20 +237,19 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             layout: { padding: { top: 25, bottom: 25, left: 10, right: 10 } },
             scales: {
                 r: {
                     grid: { display: false },
                     angleLines: { color: FIXED_SPOKE_COLOR, lineWidth: 1 },
-                    suggestedMin: 0,
-                    suggestedMax: 10,
+                    min: 0,
+                    max: 10,
                     ticks: { display: false },
                     pointLabels: { color: 'transparent' }
                 }
             },
             customBackground: { enabled: withBackground },
-            customFill: { enabled: false },
             fixedCenter: { enabled: !!fixedCenter, centerX: fixedCenter?.x, centerY: fixedCenter?.y },
             abilityColor: chartColor,
             plugins: { legend: { display: false }, segmentedFill: { enabled: false } }
@@ -309,7 +299,6 @@ window.addEventListener('load', () => {
     const ctx1 = document.getElementById('radarChart1').getContext('2d');
     radar1 = makeRadar(ctx1, true, false);
 
-    // Initialize all axis color pickers to the default chart color
     Object.values(axisColors).forEach(input => {
         input.value = chartColor;
     });
@@ -326,16 +315,20 @@ function updateCharts() {
         +recoveryInput.value || 0,
         +defenseInput.value || 0
     ];
+
     const maxVal = Math.max(...vals, 10);
+    const scaleMultiplier = 1.0; // adjust if needed (1.2 = slightly larger)
+    const scaledVals = vals.map(v => v * scaleMultiplier);
+
     chartColor = colorPicker.value || chartColor;
     const solidFill = hexToRGBA(chartColor, DEFAULT_FILL_OPACITY);
-    const capped = vals.map(v => Math.min(v, 10));
+    const capped = scaledVals.map(v => Math.min(v, 10));
 
     [radar1, radar2].forEach((chart, i) => {
         if (!chart) return;
-        chart.options.scales.r.suggestedMax = i === 0 ? maxVal : 10;
+        chart.options.scales.r.max = i === 0 ? maxVal : 10;
         chart.options.abilityColor = chartColor;
-        chart.data.datasets[0].data = i === 0 ? vals : capped;
+        chart.data.datasets[0].data = i === 0 ? scaledVals : capped;
 
         chart.options.scales.r.angleLines.color = FIXED_SPOKE_COLOR;
         chart.data.datasets[0].borderColor = FIXED_BORDER_COLOR;
@@ -343,17 +336,14 @@ function updateCharts() {
 
         if (isMulticolor) {
             chart.options.plugins.segmentedFill.enabled = true;
-            // Set the main chart background to fully transparent so the custom fill shows through
-            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)'; 
+            chart.data.datasets[0].backgroundColor = 'rgba(0,0,0,0)';
         } else {
             chart.options.plugins.segmentedFill.enabled = false;
             Object.values(axisColors).forEach(input => {
-                // Only reset the axis colors if the user hasn't selected a custom color
                 if (!input.dataset.userSelected) {
                     input.value = chartColor;
                 }
             });
-            // Use the solid color fill
             chart.data.datasets[0].backgroundColor = solidFill;
         }
 
@@ -363,30 +353,23 @@ function updateCharts() {
 
 /* === INPUT HANDLERS === */
 inputElements.forEach(el => {
-    el.addEventListener('input', () => updateCharts());
-    el.addEventListener('keyup', e => {
-        if (e.key === 'Enter') updateCharts();
-    });
+    el.addEventListener('input', updateCharts);
+    el.addEventListener('keyup', e => { if (e.key === 'Enter') updateCharts(); });
     el.addEventListener('blur', updateCharts);
 });
 
 Object.values(axisColors).forEach(input => {
     input.addEventListener('input', () => {
-        // Mark that the user has manually selected a color for this axis
-        input.dataset.userSelected = true; 
+        input.dataset.userSelected = true;
         updateCharts();
     });
 });
 
 colorPicker.addEventListener('input', () => {
     chartColor = colorPicker.value;
-    // If not in multicolor mode, update all axis colors to match the main color picker
     if (!isMulticolor) {
         Object.values(axisColors).forEach(input => {
-            // Only overwrite if the user didn't manually set an axis color
-            if (!input.dataset.userSelected) {
-                input.value = chartColor;
-            }
+            if (!input.dataset.userSelected) input.value = chartColor;
         });
     }
     updateCharts();
@@ -413,7 +396,6 @@ multiBtn.addEventListener('click', () => {
         multiBtn.textContent = 'Multicolor';
         axisColorInputs.forEach(input => input.classList.add('hidden'));
         Object.values(axisColors).forEach(input => {
-            // Reset axis colors back to the main chart color and remove user selection flag
             input.value = chartColor;
             input.dataset.userSelected = false;
         });
@@ -437,12 +419,10 @@ viewBtn.addEventListener('click', () => {
 
         const ctx2 = document.getElementById('radarChart2').getContext('2d');
         if (!radar2Ready) {
-            // Calculate center for the fixed center plugin on the overlay chart
             const center = { x: targetSize / 2, y: targetSize / 2 };
             radar2 = makeRadar(ctx2, false, true, center);
             radar2Ready = true;
         } else {
-            // Reset size if chart already exists
             radar2.resize();
         }
         updateCharts();
@@ -453,12 +433,10 @@ closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
 
 /* === DOWNLOAD === */
 downloadBtn.addEventListener('click', () => {
-    // Hide buttons before screenshot
     downloadBtn.style.visibility = 'hidden';
     closeBtn.style.visibility = 'hidden';
 
     const box = document.getElementById('characterBox');
-    // Use scale: 3 for high-resolution image output
     html2canvas(box, { scale: 3 }).then(canvas => {
         const link = document.createElement('a');
         const cleanName = (nameInput.value || 'Unnamed').replace(/\s+/g, '_');
@@ -466,7 +444,6 @@ downloadBtn.addEventListener('click', () => {
         link.href = canvas.toDataURL('image/png');
         link.click();
 
-        // Restore button visibility
         downloadBtn.style.visibility = 'visible';
         closeBtn.style.visibility = 'visible';
     });
