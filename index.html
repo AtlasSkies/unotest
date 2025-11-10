@@ -45,11 +45,12 @@
           <label>Defense Color: <input type="color" id="defenseColor" value="#92dfec"></label>
         </div>
 
+        <button id="addChartBtn">➕ Add Chart</button>
         <button id="viewBtn">View Character Chart</button>
       </div>
     </div>
 
-    <div class="chart-area">
+    <div class="chart-area" id="chartArea">
       <canvas id="radarChart1"></canvas>
     </div>
   </div>
@@ -66,6 +67,8 @@
           <b>Ability:</b> <span id="overlayAbility">-</span><br>
           <b>Level:</b> <span id="overlayLevel">-</span>
         </div>
+        <!-- ✅ Watermark -->
+        <div id="popupWatermark" class="popup-watermark">AS</div>
       </div>
 
       <div class="overlay-chart">
