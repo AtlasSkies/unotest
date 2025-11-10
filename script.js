@@ -30,12 +30,11 @@ function getAxisColors() {
 
 /* === PLUGINS === */
 
-// ✅ Updated gradient wedge fill plugin
+// ✅ Gradient Wedge Fill Plugin
 const segmentedFillPlugin = {
     id: 'segmentedFill',
     beforeDatasetsDraw(chart, args, options) {
         if (!options.enabled || chart.data.datasets.length === 0) return;
-
         const ctx = chart.ctx;
         const r = chart.scales.r;
         const meta = chart.getDatasetMeta(0);
@@ -53,7 +52,6 @@ const segmentedFillPlugin = {
             const c1 = hexToRGBA(colors[i], 1.0);
             const c2 = hexToRGBA(colors[(i + 1) % N], 1.0);
 
-            // Create a linear gradient between the wedge edges
             const grad = ctx.createLinearGradient(pt1.x, pt1.y, pt2.x, pt2.y);
             grad.addColorStop(0, c1);
             grad.addColorStop(1, c2);
@@ -66,7 +64,6 @@ const segmentedFillPlugin = {
             ctx.fillStyle = grad;
             ctx.fill();
         }
-
         ctx.restore();
     },
 };
@@ -134,6 +131,7 @@ const radarGridPlugin = {
     }
 };
 
+// Center alignment plugin
 const fixedCenterPlugin = {
     id: 'fixedCenter',
     beforeLayout(chart) {
@@ -147,6 +145,7 @@ const fixedCenterPlugin = {
     }
 };
 
+// Axis labels with outlines
 const outlinedLabelsPlugin = {
     id: 'outlinedLabels',
     afterDraw(chart) {
@@ -170,6 +169,12 @@ const outlinedLabelsPlugin = {
             const angle = base + (i * 2 * Math.PI / labels.length);
             const x = cx + baseRadius * Math.cos(angle);
             let y = cy + baseRadius * Math.sin(angle);
+
+            // 🟣 Move Defense and Speed up for overlay chart
+            if (chart.config.options.customBackground.enabled) {
+                if (i === 1 || i === 4) y -= 25;
+            }
+
             if (i === 0) y -= 5;
             ctx.strokeText(label, x, y);
             ctx.fillText(label, x, y);
@@ -178,6 +183,7 @@ const outlinedLabelsPlugin = {
     }
 };
 
+// Display stat values next to axis titles
 const inputValuePlugin = {
     id: 'inputValuePlugin',
     afterDraw(chart) {
@@ -204,6 +210,7 @@ const inputValuePlugin = {
             const angle = base + (i * 2 * Math.PI / labels.length);
             const x = cx + (baseRadius + offset) * Math.cos(angle);
             let y = cy + (baseRadius + offset) * Math.sin(angle);
+
             if (i === 0) y -= 20;
             else if (i === 1) y += 10;
             else if (i === 4) y += 10;
@@ -216,6 +223,24 @@ const inputValuePlugin = {
     }
 };
 
+// ✅ "AS" watermark plugin (5% opacity, bottom-left)
+const watermarkPlugin = {
+    id: 'watermarkPlugin',
+    afterDraw(chart) {
+        if (!chart.config.options.customBackground.enabled) return;
+        const ctx = chart.ctx;
+        const { chartArea } = chart;
+        ctx.save();
+        ctx.globalAlpha = 0.05;
+        ctx.font = '12px Candara';
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('AS', chartArea.left + 10, chartArea.bottom - 10);
+        ctx.restore();
+    }
+};
+
 /* === CHART CREATOR === */
 function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter = null) {
     const plugins = [
@@ -223,7 +248,8 @@ function makeRadar(ctx, showPoints = true, withBackground = false, fixedCenter =
         radarGridPlugin,
         outlinedLabelsPlugin,
         inputValuePlugin,
-        segmentedFillPlugin
+        segmentedFillPlugin,
+        watermarkPlugin
     ];
 
     return new Chart(ctx, {
