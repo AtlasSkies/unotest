@@ -21,6 +21,9 @@ function makeConicGradient(chart, axisColors, alpha = 0.6) {
   return grad;
 }
 
+/* ==========================
+   RADAR FACTORY
+========================== */
 function makeRadar(ctx, color, data) {
   return new Chart(ctx, {
     type: "radar",
@@ -43,7 +46,9 @@ function makeRadar(ctx, color, data) {
           grid: { display: false },
           angleLines: { color: "#6db5c0" },
           ticks: { display: false },
-          pointLabels: { color: "transparent" }
+          pointLabels: { color: "transparent" },
+          suggestedMin: 0,
+          suggestedMax: 10 // base scale starts at 10
         }
       },
       plugins: { legend: { display: false } }
@@ -144,21 +149,29 @@ function addChart() {
 
 function selectChart(index) {
   activeChart = index;
-
-  // Highlight the selected button
   chartButtons.querySelectorAll("button").forEach((b, i) => {
     b.style.backgroundColor = i === index ? "#6db5c0" : "#92dfec";
     b.style.color = i === index ? "white" : "black";
   });
 
-  // Bring selected chart to front visually
   charts.forEach((c, i) => {
     c.canvas.style.zIndex = i === index ? "2" : "1";
     c.chart.canvas.style.opacity = i === index ? "1" : "0.35";
   });
 
-  // Update inputs to reflect this chart
   updateInputs(index);
+}
+
+/* ==========================
+   SHARED SCALE LOGIC
+========================== */
+function getGlobalMax() {
+  let globalMax = 10; // base scale
+  charts.forEach(c => {
+    const localMax = Math.max(...c.stats);
+    if (localMax > globalMax) globalMax = localMax;
+  });
+  return Math.ceil(globalMax);
 }
 
 /* ==========================
@@ -176,11 +189,20 @@ function refreshActive() {
   c.color = colorPicker.value;
   c.axis = axisColorPickers.map(p => p.value);
 
-  const fill = c.multi ? makeConicGradient(c.chart, c.axis, 0.45) : hexToRGBA(c.color, 0.4);
-  c.chart.data.datasets[0].data = c.stats;
-  c.chart.data.datasets[0].borderColor = c.color;
-  c.chart.data.datasets[0].backgroundColor = fill;
-  c.chart.update();
+  // Determine shared scale
+  const globalMax = getGlobalMax();
+
+  // Update all charts to share the same scale
+  charts.forEach(chartObj => {
+    const fill = chartObj.multi
+      ? makeConicGradient(chartObj.chart, chartObj.axis, 0.45)
+      : hexToRGBA(chartObj.color, 0.4);
+    chartObj.chart.options.scales.r.suggestedMax = globalMax;
+    chartObj.chart.data.datasets[0].data = chartObj.stats;
+    chartObj.chart.data.datasets[0].borderColor = chartObj.color;
+    chartObj.chart.data.datasets[0].backgroundColor = fill;
+    chartObj.chart.update();
+  });
 }
 
 /* ==========================
@@ -200,7 +222,7 @@ multiColorBtn.addEventListener("click", () => {
 });
 
 /* ==========================
-   POPUP
+   POPUP VIEW
 ========================== */
 viewBtn.addEventListener("click", () => {
   const c = charts[activeChart];
@@ -216,7 +238,10 @@ viewBtn.addEventListener("click", () => {
       radar2 = makeRadar(ctx2, c.color, c.stats);
       radar2Ready = true;
     }
+
+    const globalMax = getGlobalMax();
     const fill = c.multi ? makeConicGradient(radar2, c.axis, 0.45) : hexToRGBA(c.color, 0.4);
+    radar2.options.scales.r.suggestedMax = globalMax;
     radar2.data.datasets[0].data = c.stats;
     radar2.data.datasets[0].borderColor = c.color;
     radar2.data.datasets[0].backgroundColor = fill;
