@@ -32,7 +32,7 @@
       <input type="file" accept="image/*" id="imgInput" />
       <img id="uploadedImg" class="upload-img" alt="Uploaded Image" />
 
-      <!-- Only these three labels have a white badge -->
+      <!-- Only these three have a white badge -->
       <div class="identity-box">
         <label class="badge"><b>Name</b> <input type="text" id="nameInput" /></label>
         <label class="badge"><b>Ability</b> <input type="text" id="abilityInput" /></label>
@@ -96,9 +96,10 @@
       <div class="image-section">
         <div class="overlay-img-wrap">
           <img id="overlayImg" class="overlay-img" alt="Character Image" />
+          <!-- AS sits above the image, below text box -->
           <div class="img-watermark">AS</div>
 
-          <!-- Overlaps bottom 5% of the image, centered, 60% width -->
+          <!-- Text box overlaps bottom 5%, centered, 60% width -->
           <div class="text-box">
             <span><b>Name:</b> <span id="overlayName">-</span></span>
             <span><b>Ability:</b> <span id="overlayAbility">-</span></span>
