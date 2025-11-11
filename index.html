@@ -19,7 +19,7 @@
           <div class="subtitle">
             By Atlas Skies
             <div class="info-container">
-              <span class="info-icon">ℹ️</span>
+              <span class="info-icon" aria-label="info">ℹ️</span>
               <div class="tooltip">
                 Credit to Atlas Skies would be greatly appreciated, but not necessary.<br>
                 If you're Uru-Chan, I love the comic — feel free to use this, lol.
@@ -32,43 +32,63 @@
       <input type="file" accept="image/*" id="imgInput" />
       <img id="uploadedImg" class="upload-img" alt="Uploaded Image" />
 
-      <!-- === Info Box === -->
-      <div class="info-box">
-        <label><b>Name:</b> <input type="text" id="nameInput" class="white-input" /></label>
-        <label><b>Ability:</b> <input type="text" id="abilityInput" class="white-input" /></label>
-        <label><b>Level:</b> <input type="text" id="levelInput" class="white-input" /></label>
+      <!-- Only these three labels have a white badge -->
+      <div class="identity-box">
+        <label class="badge"><b>Name</b> <input type="text" id="nameInput" /></label>
+        <label class="badge"><b>Ability</b> <input type="text" id="abilityInput" /></label>
+        <label class="badge"><b>Level</b> <input type="text" id="levelInput" /></label>
       </div>
 
-      <!-- === Ability Inputs === -->
       <div class="inputs">
-        <label><i>Power:</i> <input type="number" id="powerInput" step="0.1" min="0" /></label>
-        <label><i>Speed:</i> <input type="number" id="speedInput" step="0.1" min="0" /></label>
-        <label><i>Trick:</i> <input type="number" id="trickInput" step="0.1" min="0" /></label>
-        <label><i>Recovery:</i> <input type="number" id="recoveryInput" step="0.1" min="0" /></label>
-        <label><i>Defense:</i> <input type="number" id="defenseInput" step="0.1" min="0" /></label>
+        <label>
+          <i>Power:</i>
+          <input type="number" id="powerInput" step="0.1" min="0" />
+          <input type="color" id="powerColor" class="axis-color" value="#92dfec" />
+        </label>
 
-        <label><i>Ability Color:</i> <input type="color" id="colorPicker" value="#92dfec" /></label>
+        <label>
+          <i>Speed:</i>
+          <input type="number" id="speedInput" step="0.1" min="0" />
+          <input type="color" id="speedColor" class="axis-color" value="#92dfec" />
+        </label>
 
-        <button id="multiColorBtn">Multi-color</button>
-        <div id="axisColors">
-          <label><i>Power Color:</i> <input type="color" id="powerColor" value="#92dfec" /></label>
-          <label><i>Speed Color:</i> <input type="color" id="speedColor" value="#92dfec" /></label>
-          <label><i>Trick Color:</i> <input type="color" id="trickColor" value="#92dfec" /></label>
-          <label><i>Recovery Color:</i> <input type="color" id="recoveryColor" value="#92dfec" /></label>
-          <label><i>Defense Color:</i> <input type="color" id="defenseColor" value="#92dfec" /></label>
+        <label>
+          <i>Trick:</i>
+          <input type="number" id="trickInput" step="0.1" min="0" />
+          <input type="color" id="trickColor" class="axis-color" value="#92dfec" />
+        </label>
+
+        <label>
+          <i>Recovery:</i>
+          <input type="number" id="recoveryInput" step="0.1" min="0" />
+          <input type="color" id="recoveryColor" class="axis-color" value="#92dfec" />
+        </label>
+
+        <label>
+          <i>Defense:</i>
+          <input type="number" id="defenseInput" step="0.1" min="0" />
+          <input type="color" id="defenseColor" class="axis-color" value="#92dfec" />
+        </label>
+
+        <label>
+          <i>Ability Color:</i>
+          <input type="color" id="colorPicker" value="#92dfec" />
+        </label>
+
+        <div class="button-row">
+          <button id="multiColorBtn">Multi-color</button>
+          <button id="addChartBtn">Add Chart</button>
+          <button id="viewBtn">View Character Chart</button>
         </div>
 
-        <button id="addChartBtn">Add Chart</button>
         <div id="chartButtons"></div>
-
-        <button id="viewBtn">View Character Chart</button>
       </div>
     </div>
 
     <div class="chart-area" id="chartArea"></div>
   </div>
 
-  <!-- === Overlay Popup === -->
+  <!-- Overlay -->
   <div id="overlay" class="overlay hidden">
     <div id="characterBox" class="character-box">
       <button id="closeBtn" class="close-btn">×</button>
@@ -78,11 +98,11 @@
           <img id="overlayImg" class="overlay-img" alt="Character Image" />
           <div class="img-watermark">AS</div>
 
-          <!-- Overlay text box -->
+          <!-- Overlaps bottom 5% of the image, centered, 60% width -->
           <div class="text-box">
-            <i><b>Name:</b> <span id="overlayName">-</span><br />
-            <b>Ability:</b> <span id="overlayAbility">-</span><br />
-            <b>Level:</b> <span id="overlayLevel">-</span></i>
+            <span><b>Name:</b> <span id="overlayName">-</span></span>
+            <span><b>Ability:</b> <span id="overlayAbility">-</span></span>
+            <span><b>Level:</b> <span id="overlayLevel">-</span></span>
           </div>
         </div>
       </div>
