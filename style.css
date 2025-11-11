@@ -1,30 +1,34 @@
-/* ===== Local Carlito font ===== */
+/* === Carlito Font with full compatibility === */
 @font-face {
   font-family: 'Carlito';
-  src: url('./fonts/Carlito-Regular.ttf') format('truetype');
+  src: url('./fonts/Carlito-Regular.woff2') format('woff2'),
+       url('./fonts/Carlito-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('./fonts/Carlito-Bold.ttf') format('truetype');
+  src: url('./fonts/Carlito-Bold.woff2') format('woff2'),
+       url('./fonts/Carlito-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('./fonts/Carlito-Italic.ttf') format('truetype');
+  src: url('./fonts/Carlito-Italic.woff2') format('woff2'),
+       url('./fonts/Carlito-Italic.ttf') format('truetype');
   font-weight: 400;
   font-style: italic;
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('./fonts/Carlito-BoldItalic.ttf') format('truetype');
+  src: url('./fonts/Carlito-BoldItalic.woff2') format('woff2'),
+       url('./fonts/Carlito-BoldItalic.ttf') format('truetype');
   font-weight: 700;
   font-style: italic;
 }
 
-/* ===== Page ===== */
+/* === Global layout === */
 body {
   font-family: 'Carlito', 'Optima', 'Avenir', 'Helvetica Neue', Arial, sans-serif;
   background: #f0f8fc;
@@ -36,14 +40,13 @@ body {
   color: #333;
 }
 
+/* === Structure === */
 .container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: flex-start;
   gap: 30px;
   max-width: 1200px;
-  width: 100%;
 }
 
 .left {
@@ -51,175 +54,141 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 15px;
-  min-width: 300px;
 }
 
-.header-with-info { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-.title-block { display: flex; flex-direction: column; align-items: center; }
-
-h1 { text-align: center; font-style: italic; color: #333; margin: 0; }
-
-.subtitle {
-  font-style: italic;
-  font-size: 14px;
-  color: #666;
-  margin-top: -5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
-
-/* Tooltip */
-.info-container { position: relative; display: inline-block; }
-.info-icon { margin-left: 6px; cursor: pointer; font-size: 15px; color: #4e4e4e; transition: color 0.2s ease; }
-.info-icon:hover { color: #8747e6; }
-
-.tooltip {
-  position: absolute;
-  top: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ffffff;
+/* === Info box (main page) === */
+.info-box-shared {
+  background: white;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 8px 12px;
-  width: 250px;
-  font-size: 12px;
-  color: #333;
-  text-align: center;
-  white-space: normal;
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
-  z-index: 100; /* ensure above page content */
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-.info-container:hover .tooltip { visibility: visible; opacity: 1; transform: translate(-50%, 5px); }
-
-/* Upload preview */
-.upload-img {
-  width: clamp(180px, 25vw, 250px);
-  height: clamp(180px, 25vw, 250px);
-  border: 2px dashed #aaa;
   border-radius: 10px;
-  object-fit: cover;
-  background-color: white;
+  padding: 10px 12px;
+  width: clamp(200px, 80%, 260px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* Only Name/Ability/Level have a white badge */
-.identity-box { display: flex; flex-direction: column; gap: 6px; }
-.badge {
+.info-box-shared label {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: #fff;
-  border: 1px solid #d6d6d6;
-  border-radius: 8px;
-  width: clamp(200px, 80%, 260px);
+  font-weight: bold;
+  font-size: 15px;
 }
 
-.inputs { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.info-box-shared input {
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  padding: 4px;
+  font-family: 'Carlito';
+  width: 120px;
+}
+
+/* === Inputs === */
+.inputs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
 
 label {
-  font-size: 15px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   width: clamp(200px, 80%, 260px);
-  gap: 8px;
+  font-size: 15px;
 }
-label i { font-style: italic; }
 
 input[type="number"], input[type="text"] {
-  width: 110px;
-  border-radius: 4px;
   border: 1px solid #ccc;
+  border-radius: 4px;
   padding: 4px;
   font-family: 'Carlito';
 }
 
 input[type="color"] {
-  border: none;
-  background: none;
   width: 36px;
   height: 26px;
+  border: none;
+  background: none;
   cursor: pointer;
-  padding: 0;
 }
 
-/* Inline axis color pickers (hidden until Multi-color on) */
-.axis-color { display: none; }
+.axis-color {
+  display: none; /* shown when Multi-color enabled */
+}
 
-.button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-
+/* === Buttons === */
 button {
-  margin-top: 6px;
-  padding: 6px 12px;
-  font-family: 'Carlito';
-  font-weight: bold;
   background-color: #92dfec;
   border: none;
   border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: bold;
+  font-family: 'Carlito';
   cursor: pointer;
   transition: all 0.2s ease;
 }
-button:hover { background-color: #6db5c0; color: white; }
+button:hover {
+  background-color: #6db5c0;
+  color: white;
+}
 
-#chartButtons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.button-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
-/* Chart canvas area */
+/* === Chart === */
 .chart-area {
   position: relative;
   width: clamp(300px, 40vw, 500px);
   height: clamp(300px, 40vw, 500px);
 }
 
-/* Popup */
-.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.hidden { display: none; }
+/* === Popup (View Character Chart) === */
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
 
 .character-box {
   background: #fff;
-  width: 52vw; height: 64vh;
   border-radius: 15px;
-  position: relative;
-  color: #000;
+  padding: 20px;
+  width: 52vw; height: 64vh;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 40px;
-  overflow: hidden;
-  padding: 20px;
+  position: relative;
 }
 
-.close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; background: none; border: none; cursor: pointer; }
-
-/* Image + overlays */
-.image-section { display: flex; flex-direction: column; align-items: center; position: relative; }
-
-/* Critical: positioning context so z-index works predictably */
 .overlay-img-wrap {
   position: relative;
   display: inline-block;
-  width: 300px;  /* lock width so text-box % width is consistent */
-  height: 300px; /* lock height for the 5% overlap calc */
+  width: 300px;
+  height: 300px;
 }
 
-/* Image is the base layer */
 .overlay-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border: 3px solid #493e3b;
   border-radius: 6px;
-  position: relative;
-  z-index: 1; /* base */
+  z-index: 1;
 }
 
-/* AS watermark — above image, below text box */
+/* Watermark */
 .img-watermark {
   position: absolute;
   bottom: 10px;
@@ -229,46 +198,35 @@ button:hover { background-color: #6db5c0; color: white; }
   color: rgba(0, 0, 0, 0.05);
   z-index: 2;
   pointer-events: none;
-  user-select: none;
-  letter-spacing: 1px;
 }
 
-/* Text box: centered, 60% width, overlaps bottom 5% of image, above everything */
+/* Centered stacked text box */
 .text-box {
   position: absolute;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 0;                 /* sit on bottom edge */
-  height: 5%;                /* overlap bottom 5% */
-  width: 60%;                /* 3/5 width */
-  background: rgba(255,255,255,0.96);
+  width: 60%;
+  background: rgba(255,255,255,0.95);
   border: 2px solid #493e3b;
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  text-align: center;
+  z-index: 3;
+  padding: 5px;
+  font-family: 'Carlito';
+}
+
+.text-box p {
+  margin: 2px 0;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.overlay-chart {
   display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: space-around;
-  gap: 6px;
-  padding: 2px 6px;
-  z-index: 3;                /* above image + AS */
-  font-size: 11px;           /* slightly smaller */
-  line-height: 1;
-}
-.text-box b { font-weight: 700; }
-.text-box span { white-space: nowrap; }
-
-/* Popup chart */
-.overlay-chart { display: flex; justify-content: center; align-items: center; width: clamp(280px, 40vw, 450px); height: clamp(280px, 40vw, 450px); }
-
-#downloadBtn {
-  position: absolute; bottom: 10px; right: 10px;
-  background: #92dfec; border: none; border-radius: 5px; padding: 6px 10px;
-  cursor: pointer; font-weight: bold;
-}
-
-@media (max-width: 768px) {
-  .character-box { flex-direction: column; width: 90vw; max-height: 90vh; padding: 15px; gap: 20px; overflow-y: auto; }
-  .overlay-img-wrap { width: 70vw; height: auto; }
-  .overlay-img { width: 100%; height: auto; max-height: 35vh; }
-  .text-box { width: 60%; }
+  width: clamp(280px, 40vw, 450px);
+  height: clamp(280px, 40vw, 450px);
 }
