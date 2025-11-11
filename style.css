@@ -1,4 +1,4 @@
-/* === FONT === */
+/* ===== Local Carlito font ===== */
 @font-face {
   font-family: 'Carlito';
   src: url('./fonts/Carlito-Regular.ttf') format('truetype');
@@ -7,12 +7,24 @@
 }
 @font-face {
   font-family: 'Carlito';
+  src: url('./fonts/Carlito-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Carlito';
   src: url('./fonts/Carlito-Italic.ttf') format('truetype');
   font-weight: 400;
   font-style: italic;
 }
+@font-face {
+  font-family: 'Carlito';
+  src: url('./fonts/Carlito-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
 
-/* === GLOBAL === */
+/* ===== Page ===== */
 body {
   font-family: 'Carlito', 'Optima', 'Avenir', 'Helvetica Neue', Arial, sans-serif;
   background: #f0f8fc;
@@ -24,145 +36,229 @@ body {
   color: #333;
 }
 
-/* === STRUCTURE === */
-.container { display: flex; flex-wrap: wrap; gap: 30px; }
-.left { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-h1 { font-style: italic; margin: 0; text-align: center; }
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 30px;
+  max-width: 1200px;
+  width: 100%;
+}
 
-/* === TOOLTIP === */
+.left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  min-width: 300px;
+}
+
+.header-with-info { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.title-block { display: flex; flex-direction: column; align-items: center; }
+
+h1 { text-align: center; font-style: italic; color: #333; margin: 0; }
+
+.subtitle {
+  font-style: italic;
+  font-size: 14px;
+  color: #666;
+  margin-top: -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* Tooltip */
 .info-container { position: relative; display: inline-block; }
-.info-icon { margin-left: 6px; cursor: pointer; font-size: 15px; color: #4e4e4e; transition: 0.2s; }
+.info-icon { margin-left: 6px; cursor: pointer; font-size: 15px; color: #4e4e4e; transition: color 0.2s ease; }
 .info-icon:hover { color: #8747e6; }
+
 .tooltip {
-  position: absolute; top: 125%; left: 50%; transform: translateX(-50%);
-  background: white; border: 1px solid #ccc; border-radius: 8px;
-  padding: 8px 12px; width: 250px; font-size: 12px; color: #333;
-  visibility: hidden; opacity: 0; transition: 0.3s;
-  z-index: 10; text-align: center;
+  position: absolute;
+  top: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  width: 250px;
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  white-space: normal;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .info-container:hover .tooltip { visibility: visible; opacity: 1; transform: translate(-50%, 5px); }
 
-/* === INPUT SECTION === */
+/* Upload preview */
 .upload-img {
-  width: 230px; height: 230px;
-  border: 2px dashed #aaa; border-radius: 10px;
-  object-fit: cover; background: white;
+  width: clamp(180px, 25vw, 250px);
+  height: clamp(180px, 25vw, 250px);
+  border: 2px dashed #aaa;
+  border-radius: 10px;
+  object-fit: cover;
+  background-color: white;
 }
 
-/* white background only for name, ability, level */
-.white-input {
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 4px;
-  width: 110px;
-  font-family: 'Carlito';
+/* Remove white box behind all inputs */
+.identity-box { display: flex; flex-direction: column; gap: 6px; }
+
+/* Only Name/Ability/Level labels get white badge */
+.badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  width: clamp(200px, 80%, 260px);
 }
 
-/* other stat inputs */
-.inputs { display: flex; flex-direction: column; gap: 8px; align-items: center; background: none; }
-label { font-size: 15px; display: flex; justify-content: space-between; width: 240px; }
+.inputs { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+label {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: clamp(200px, 80%, 260px);
+  gap: 8px;
+}
+
 label i { font-style: italic; }
 
 input[type="number"], input[type="text"] {
   width: 110px;
-  border: 1px solid #ccc;
   border-radius: 4px;
+  border: 1px solid #ccc;
   padding: 4px;
   font-family: 'Carlito';
-  font-style: italic;
 }
 
 input[type="color"] {
   border: none;
   background: none;
-  width: 60px;
-  height: 35px;
+  width: 36px;
+  height: 26px;
   cursor: pointer;
+  padding: 0;
 }
+
+/* inline axis color pickers (hidden until Multi-color on) */
+.axis-color { display: none; }
+
+.button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 
 button {
-  background: #92dfec;
+  margin-top: 6px;
+  padding: 6px 12px;
+  font-family: 'Carlito';
+  font-weight: bold;
+  background-color: #92dfec;
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
-  font-weight: bold;
-  font-family: 'Carlito';
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s ease;
 }
-button:hover { background: #6db5c0; color: white; }
+button:hover { background-color: #6db5c0; color: white; }
 
-/* === OVERLAY === */
-.overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 10;
+#chartButtons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+.chart-area {
+  position: relative;
+  width: clamp(300px, 40vw, 500px);
+  height: clamp(300px, 40vw, 500px);
 }
+
+/* Popup */
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10; }
 .hidden { display: none; }
 
 .character-box {
   background: #fff;
-  border-radius: 15px;
-  display: flex; align-items: center; justify-content: center;
-  gap: 40px; padding: 20px;
   width: 52vw; height: 64vh;
+  border-radius: 15px;
   position: relative;
-}
-.close-btn {
-  position: absolute; top: 10px; right: 15px;
-  font-size: 28px; background: none; border: none; cursor: pointer;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  overflow: hidden;
+  padding: 20px;
 }
 
-/* === IMAGE & OVERLAY TEXT === */
-.image-section { display: flex; justify-content: center; align-items: center; position: relative; }
+.close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; background: none; border: none; cursor: pointer; }
+
+/* Image + overlays */
+.image-section { display: flex; flex-direction: column; align-items: center; position: relative; }
+
 .overlay-img-wrap { position: relative; display: inline-block; }
 .overlay-img {
-  width: 300px; height: 300px;
-  object-fit: cover;
-  border: 3px solid #493e3b;
-  border-radius: 6px;
+  width: 300px; height: 300px; object-fit: cover;
+  border: 3px solid #493e3b; border-radius: 6px;
   display: block;
-  margin: 0 auto;
-  z-index: 1;
 }
 
-/* Watermark */
+/* AS watermark on image (under text box) */
 .img-watermark {
   position: absolute;
-  bottom: 10px; left: 12px;
-  font-size: 12px; font-weight: bold;
-  color: rgba(0, 0, 0, 0.07);
+  bottom: 10px;
+  left: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.05);
+  z-index: 5;            /* lower than text-box */
   pointer-events: none;
   user-select: none;
-  z-index: 2;
+  letter-spacing: 1px;
 }
 
-/* === TEXT BOX ON IMAGE === */
+/* Text box: center horizontally over image, 60% width, overlaps bottom 5% */
 .text-box {
   position: absolute;
-  bottom: 0; left: 50%;
+  left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  background: rgba(255, 255, 255, 0.85);
-  border-top: 1px solid #493e3b;
-  padding: 5px;
-  text-align: center;
-  font-style: italic;
-  font-size: 13px;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
-  z-index: 3;
+  bottom: 0;                 /* sit on bottom edge */
+  height: 5%;                /* overlap bottom 5% */
+  width: 60%;                /* 3/5 width */
+  background: rgba(255,255,255,0.95);
+  border: 2px solid #493e3b;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 6px;
+  padding: 2px 6px;
+  z-index: 10;               /* above image & watermark */
+  font-size: 11px;           /* smaller text as requested */
+  line-height: 1;
 }
 
-/* === CHART === */
-.overlay-chart {
-  display: flex; justify-content: center; align-items: center;
-  width: 400px; height: 400px;
-}
+.text-box b { font-weight: 700; }
+.text-box span { white-space: nowrap; }
+
+/* Popup chart area */
+.overlay-chart { display: flex; justify-content: center; align-items: center; width: clamp(280px, 40vw, 450px); height: clamp(280px, 40vw, 450px); }
+
 #downloadBtn {
   position: absolute; bottom: 10px; right: 10px;
-  background: #92dfec; border: none; border-radius: 5px;
-  padding: 6px 10px; cursor: pointer; font-weight: bold;
+  background: #92dfec; border: none; border-radius: 5px; padding: 6px 10px;
+  cursor: pointer; font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .character-box { flex-direction: column; width: 90vw; max-height: 90vh; padding: 15px; gap: 20px; overflow-y: auto; }
+  .overlay-img { width: 70vw; height: auto; max-height: 35vh; }
+  .text-box { width: 60%; }
 }
