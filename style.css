@@ -1,4 +1,4 @@
-/* === GLOBAL FONT === */
+/* === FONT === */
 @font-face {
   font-family: 'Carlito';
   src: url('./fonts/Carlito-Regular.ttf') format('truetype');
@@ -7,9 +7,9 @@
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('./fonts/Carlito-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
+  src: url('./fonts/Carlito-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
 }
 
 body {
@@ -23,35 +23,51 @@ body {
   color: #333;
 }
 
-/* --- Structure --- */
+/* === Layout === */
 .container { display: flex; flex-wrap: wrap; gap: 30px; }
 .left { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-h1 { font-style: italic; color: #333; margin: 0; text-align: center; }
-.subtitle { font-style: italic; font-size: 14px; color: #666; margin-top: -5px; }
+h1 { font-style: italic; margin: 0; text-align: center; }
 
-/* Tooltip */
+/* --- Tooltip --- */
 .info-container { position: relative; display: inline-block; }
-.info-icon { margin-left: 6px; cursor: pointer; font-size: 15px; color: #4e4e4e; transition: color 0.2s; }
+.info-icon { margin-left: 6px; cursor: pointer; font-size: 15px; color: #4e4e4e; transition: 0.2s; }
 .info-icon:hover { color: #8747e6; }
 .tooltip {
-  position: absolute;
-  top: 125%; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 125%; left: 50%; transform: translateX(-50%);
   background: white; border: 1px solid #ccc; border-radius: 8px;
   padding: 8px 12px; width: 250px; font-size: 12px; color: #333;
-  visibility: hidden; opacity: 0; transition: opacity 0.3s;
+  visibility: hidden; opacity: 0; transition: 0.3s;
   z-index: 10; text-align: center;
 }
 .info-container:hover .tooltip { visibility: visible; opacity: 1; transform: translate(-50%, 5px); }
 
-/* Upload */
-.upload-img { width: 230px; height: 230px; border: 2px dashed #aaa; border-radius: 10px; object-fit: cover; background: white; }
-
-/* Inputs */
-.info-box, .inputs { display: flex; flex-direction: column; align-items: center; gap: 6px; background: white; border-radius: 8px; padding: 10px; }
-button { background: #92dfec; border: none; border-radius: 6px; padding: 6px 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+/* === Upload + Inputs === */
+.upload-img {
+  width: 230px; height: 230px; border: 2px dashed #aaa; border-radius: 10px;
+  object-fit: cover; background: white;
+}
+.inputs {
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  background: none; /* removed white box */
+}
+label {
+  font-style: italic;
+  display: flex; justify-content: space-between; width: 240px;
+  font-size: 15px;
+}
+input[type="number"], input[type="text"] {
+  width: 110px; border: 1px solid #ccc; border-radius: 4px; padding: 4px;
+  font-family: 'Carlito'; font-style: italic;
+}
+input[type="color"] {
+  border: none; background: none; width: 60px; height: 35px; cursor: pointer;
+}
+button {
+  background: #92dfec; border: none; border-radius: 6px;
+  padding: 6px 12px; font-weight: bold; font-family: 'Carlito';
+  cursor: pointer; transition: 0.2s;
+}
 button:hover { background: #6db5c0; color: white; }
-
-.chart-area { position: relative; width: 400px; height: 400px; }
 
 /* === Overlay === */
 .overlay {
@@ -67,59 +83,41 @@ button:hover { background: #6db5c0; color: white; }
 }
 .close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; background: none; border: none; cursor: pointer; }
 
-/* === Image + Watermark + Text Box Fix === */
-.image-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-  padding-bottom: 55px;
-}
-
-/* image lowest */
-.overlay-img-wrap { position: relative; display: inline-block; z-index: 1; }
+/* === Image + Text Overlay === */
+.image-section { display: flex; justify-content: center; align-items: center; position: relative; }
+.overlay-img-wrap { position: relative; display: inline-block; }
 .overlay-img {
-  width: 300px; height: 300px;
-  object-fit: cover;
-  border: 3px solid #493e3b;
-  border-radius: 6px;
-  z-index: 1;
+  width: 300px; height: 300px; object-fit: cover;
+  border: 3px solid #493e3b; border-radius: 6px;
 }
-
-/* Watermark */
 .img-watermark {
-  position: absolute;
-  bottom: 10px; left: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  color: rgba(0, 0, 0, 0.07);
+  position: absolute; bottom: 10px; left: 12px;
+  font-size: 12px; font-weight: bold;
+  color: rgba(0, 0, 0, 0.07); pointer-events: none; user-select: none;
   z-index: 2;
-  pointer-events: none;
-  user-select: none;
-  letter-spacing: 1px;
 }
 
-/* Text Box Above All */
+/* Overlapping translucent text box */
 .text-box {
   position: absolute;
-  bottom: -35px;
-  width: 80%;
-  background: white;
-  border: 2px solid #493e3b;
-  border-radius: 4px;
+  bottom: 0; /* sits at bottom of image */
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85); /* translucent white */
+  border-top: 1px solid #493e3b;
   padding: 6px;
   text-align: center;
-  z-index: 3;
+  font-style: italic;
   font-size: 13px;
-  line-height: 1.2;
+  z-index: 3;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
 
+/* === Chart Area === */
 .overlay-chart {
   display: flex; justify-content: center; align-items: center;
-  width: 400px; height: 400px; z-index: 0;
+  width: 400px; height: 400px;
 }
-
 #downloadBtn {
   position: absolute; bottom: 10px; right: 10px;
   background: #92dfec; border: none; border-radius: 5px;
