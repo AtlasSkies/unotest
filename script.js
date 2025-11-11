@@ -38,8 +38,7 @@ function getGlobalScaleMax() {
 /*************************
  * PLUGINS
  *************************/
-
-/* Pentagon background (popup only) */
+/* Popup pentagon background */
 const radarBackgroundPlugin = {
   id: 'customPentagonBackground',
   beforeDatasetsDraw(chart) {
@@ -112,7 +111,7 @@ const axisTitlesPlugin = {
 
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = 'italic 18px Candara';
+    ctx.font = 'italic 18px Carlito, sans-serif';
     ctx.strokeStyle = '#8747e6'; ctx.fillStyle = 'white'; ctx.lineWidth = 4;
 
     labels.forEach((label, i) => {
@@ -120,9 +119,8 @@ const axisTitlesPlugin = {
       const x = cx + baseRadius * Math.cos(a);
       let y = cy + baseRadius * Math.sin(a);
 
-      // Adjust in popup: raise Speed & Defense
       if (isPopup && (label === 'Speed' || label === 'Defense')) y -= 25;
-      if (i === 0) y -= 5; // Power slightly up
+      if (i === 0) y -= 5;
 
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
@@ -131,13 +129,11 @@ const axisTitlesPlugin = {
   }
 };
 
-/* Parentheses plugin (main chart only, live max update) */
+/* Global parentheses values on main chart(s) only */
 const globalValueLabelsPlugin = {
   id: 'globalValueLabels',
   afterDraw(chart) {
-    // Only apply to main charts (not popup)
     if (chart.canvas.closest('#overlay')) return;
-
     const ctx = chart.ctx, r = chart.scales.r;
     const labels = chart.data.labels;
     const cx = r.xCenter, cy = r.yCenter;
@@ -145,17 +141,14 @@ const globalValueLabelsPlugin = {
     const baseRadius = r.drawingArea * 1.1;
     const offset = 20;
 
-    // Find global max per axis
     const axes = labels.length;
     const maxPerAxis = new Array(axes).fill(0);
     charts.forEach(c => {
-      for (let i = 0; i < axes; i++) {
-        maxPerAxis[i] = Math.max(maxPerAxis[i], c.stats[i] || 0);
-      }
+      for (let i = 0; i < axes; i++) maxPerAxis[i] = Math.max(maxPerAxis[i], c.stats[i] || 0);
     });
 
     ctx.save();
-    ctx.font = '15px Candara';
+    ctx.font = '15px Carlito, sans-serif';
     ctx.fillStyle = 'black';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -164,10 +157,7 @@ const globalValueLabelsPlugin = {
       const angle = base + (i * 2 * Math.PI / axes);
       const x = cx + (baseRadius + offset) * Math.cos(angle);
       let y = cy + (baseRadius + offset) * Math.sin(angle);
-
-      // Lower Power, Speed, Defense slightly
-      if (i === 0 || i === 1 || i === 4) y += 20;
-
+      if (i === 0 || i === 1 || i === 4) y += 20;   // slightly lower Power/Speed/Defense
       const val = Math.round(maxPerAxis[i] * 100) / 100;
       ctx.fillText(`(${val})`, x, y);
     });
@@ -229,7 +219,7 @@ const defenseInput = document.getElementById('defenseInput');
 
 const colorPicker = document.getElementById('colorPicker');
 const multiColorBtn = document.getElementById('multiColorBtn');
-const axisColorsDiv = document.getElementById('axisColors');
+
 const axisColorPickers = [
   document.getElementById('powerColor'),
   document.getElementById('speedColor'),
@@ -303,7 +293,12 @@ function selectChart(index) {
   [powerInput, speedInput, trickInput, recoveryInput, defenseInput].forEach((el, i) => el.value = c.stats[i]);
   colorPicker.value = c.color;
   multiColorBtn.textContent = c.multi ? 'Single-color' : 'Multi-color';
-  axisColorsDiv.style.display = c.multi ? 'flex' : 'none';
+
+  // Show/hide inline color wheels based on this chart's mode
+  axisColorPickers.forEach((p, i) => {
+    p.style.display = c.multi ? 'inline-block' : 'none';
+    if (c.multi) p.value = c.axis[i];
+  });
 }
 
 /*************************
@@ -374,7 +369,14 @@ multiColorBtn.addEventListener('click', () => {
   const c = charts[activeIndex];
   c.multi = !c.multi;
   multiColorBtn.textContent = c.multi ? 'Single-color' : 'Multi-color';
-  axisColorsDiv.style.display = c.multi ? 'flex' : 'none';
+  axisColorPickers.forEach((picker, i) => {
+    picker.style.display = c.multi ? 'inline-block' : 'none';
+    if (c.multi && !c.axis[i]) picker.value = colorPicker.value;
+  });
+  if (!c.multi) {
+    // collapse back to single-color: reset axis array to ability color
+    c.axis = c.axis.map(() => colorPicker.value);
+  }
   refreshAll();
 });
 
