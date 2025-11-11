@@ -32,11 +32,11 @@
       <input type="file" accept="image/*" id="imgInput" />
       <img id="uploadedImg" class="upload-img" alt="Uploaded Image" />
 
-      <!-- Only these three have a white badge -->
-      <div class="identity-box">
-        <label class="badge"><b>Name</b> <input type="text" id="nameInput" /></label>
-        <label class="badge"><b>Ability</b> <input type="text" id="abilityInput" /></label>
-        <label class="badge"><b>Level</b> <input type="text" id="levelInput" /></label>
+      <!-- Shared white info box -->
+      <div class="info-box-shared">
+        <label><b>Name:</b> <input type="text" id="nameInput" /></label>
+        <label><b>Ability:</b> <input type="text" id="abilityInput" /></label>
+        <label><b>Level:</b> <input type="text" id="levelInput" /></label>
       </div>
 
       <div class="inputs">
@@ -96,14 +96,13 @@
       <div class="image-section">
         <div class="overlay-img-wrap">
           <img id="overlayImg" class="overlay-img" alt="Character Image" />
-          <!-- AS sits above the image, below text box -->
           <div class="img-watermark">AS</div>
 
-          <!-- Text box overlaps bottom 5%, centered, 60% width -->
+          <!-- Text box stacked vertically, centered -->
           <div class="text-box">
-            <span><b>Name:</b> <span id="overlayName">-</span></span>
-            <span><b>Ability:</b> <span id="overlayAbility">-</span></span>
-            <span><b>Level:</b> <span id="overlayLevel">-</span></span>
+            <p><b>Name:</b> <span id="overlayName">-</span></p>
+            <p><b>Ability:</b> <span id="overlayAbility">-</span></p>
+            <p><b>Level:</b> <span id="overlayLevel">-</span></p>
           </div>
         </div>
       </div>
