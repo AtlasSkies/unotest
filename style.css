@@ -92,7 +92,7 @@ h1 { text-align: center; font-style: italic; color: #333; margin: 0; }
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;
-  z-index: 10;
+  z-index: 100; /* ensure above page content */
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .info-container:hover .tooltip { visibility: visible; opacity: 1; transform: translate(-50%, 5px); }
@@ -107,10 +107,8 @@ h1 { text-align: center; font-style: italic; color: #333; margin: 0; }
   background-color: white;
 }
 
-/* Remove white box behind all inputs */
+/* Only Name/Ability/Level have a white badge */
 .identity-box { display: flex; flex-direction: column; gap: 6px; }
-
-/* Only Name/Ability/Level labels get white badge */
 .badge {
   display: flex;
   justify-content: space-between;
@@ -133,7 +131,6 @@ label {
   width: clamp(200px, 80%, 260px);
   gap: 8px;
 }
-
 label i { font-style: italic; }
 
 input[type="number"], input[type="text"] {
@@ -153,7 +150,7 @@ input[type="color"] {
   padding: 0;
 }
 
-/* inline axis color pickers (hidden until Multi-color on) */
+/* Inline axis color pickers (hidden until Multi-color on) */
 .axis-color { display: none; }
 
 .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -173,6 +170,7 @@ button:hover { background-color: #6db5c0; color: white; }
 
 #chartButtons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 
+/* Chart canvas area */
 .chart-area {
   position: relative;
   width: clamp(300px, 40vw, 500px);
@@ -180,7 +178,7 @@ button:hover { background-color: #6db5c0; color: white; }
 }
 
 /* Popup */
-.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 10; }
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .hidden { display: none; }
 
 .character-box {
@@ -202,14 +200,26 @@ button:hover { background-color: #6db5c0; color: white; }
 /* Image + overlays */
 .image-section { display: flex; flex-direction: column; align-items: center; position: relative; }
 
-.overlay-img-wrap { position: relative; display: inline-block; }
-.overlay-img {
-  width: 300px; height: 300px; object-fit: cover;
-  border: 3px solid #493e3b; border-radius: 6px;
-  display: block;
+/* Critical: positioning context so z-index works predictably */
+.overlay-img-wrap {
+  position: relative;
+  display: inline-block;
+  width: 300px;  /* lock width so text-box % width is consistent */
+  height: 300px; /* lock height for the 5% overlap calc */
 }
 
-/* AS watermark on image (under text box) */
+/* Image is the base layer */
+.overlay-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 3px solid #493e3b;
+  border-radius: 6px;
+  position: relative;
+  z-index: 1; /* base */
+}
+
+/* AS watermark — above image, below text box */
 .img-watermark {
   position: absolute;
   bottom: 10px;
@@ -217,13 +227,13 @@ button:hover { background-color: #6db5c0; color: white; }
   font-size: 12px;
   font-weight: bold;
   color: rgba(0, 0, 0, 0.05);
-  z-index: 5;            /* lower than text-box */
+  z-index: 2;
   pointer-events: none;
   user-select: none;
   letter-spacing: 1px;
 }
 
-/* Text box: center horizontally over image, 60% width, overlaps bottom 5% */
+/* Text box: centered, 60% width, overlaps bottom 5% of image, above everything */
 .text-box {
   position: absolute;
   left: 50%;
@@ -231,7 +241,7 @@ button:hover { background-color: #6db5c0; color: white; }
   bottom: 0;                 /* sit on bottom edge */
   height: 5%;                /* overlap bottom 5% */
   width: 60%;                /* 3/5 width */
-  background: rgba(255,255,255,0.95);
+  background: rgba(255,255,255,0.96);
   border: 2px solid #493e3b;
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;
@@ -240,15 +250,14 @@ button:hover { background-color: #6db5c0; color: white; }
   justify-content: space-around;
   gap: 6px;
   padding: 2px 6px;
-  z-index: 10;               /* above image & watermark */
-  font-size: 11px;           /* smaller text as requested */
+  z-index: 3;                /* above image + AS */
+  font-size: 11px;           /* slightly smaller */
   line-height: 1;
 }
-
 .text-box b { font-weight: 700; }
 .text-box span { white-space: nowrap; }
 
-/* Popup chart area */
+/* Popup chart */
 .overlay-chart { display: flex; justify-content: center; align-items: center; width: clamp(280px, 40vw, 450px); height: clamp(280px, 40vw, 450px); }
 
 #downloadBtn {
@@ -259,6 +268,7 @@ button:hover { background-color: #6db5c0; color: white; }
 
 @media (max-width: 768px) {
   .character-box { flex-direction: column; width: 90vw; max-height: 90vh; padding: 15px; gap: 20px; overflow-y: auto; }
-  .overlay-img { width: 70vw; height: auto; max-height: 35vh; }
+  .overlay-img-wrap { width: 70vw; height: auto; }
+  .overlay-img { width: 100%; height: auto; max-height: 35vh; }
   .text-box { width: 60%; }
 }
