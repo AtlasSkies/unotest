@@ -38,7 +38,6 @@ function getGlobalScaleMax() {
 /*************************
  * PLUGINS
  *************************/
-/* Popup pentagon background */
 const radarBackgroundPlugin = {
   id: 'customPentagonBackground',
   beforeDatasetsDraw(chart) {
@@ -96,7 +95,6 @@ const radarBackgroundPlugin = {
   }
 };
 
-/* Axis titles */
 const axisTitlesPlugin = {
   id: 'axisTitles',
   afterDraw(chart) {
@@ -106,7 +104,6 @@ const axisTitlesPlugin = {
     const cx = r.xCenter, cy = r.yCenter;
     const base = -Math.PI / 2;
     const baseRadius = r.drawingArea * 1.1;
-
     const isPopup = chart.canvas.closest('#overlay') !== null;
 
     ctx.save();
@@ -118,10 +115,8 @@ const axisTitlesPlugin = {
       const a = base + (i * 2 * Math.PI / labels.length);
       const x = cx + baseRadius * Math.cos(a);
       let y = cy + baseRadius * Math.sin(a);
-
       if (isPopup && (label === 'Speed' || label === 'Defense')) y -= 25;
       if (i === 0) y -= 5;
-
       ctx.strokeText(label, x, y);
       ctx.fillText(label, x, y);
     });
@@ -129,7 +124,6 @@ const axisTitlesPlugin = {
   }
 };
 
-/* Global parentheses values on main chart(s) only */
 const globalValueLabelsPlugin = {
   id: 'globalValueLabels',
   afterDraw(chart) {
@@ -157,7 +151,7 @@ const globalValueLabelsPlugin = {
       const angle = base + (i * 2 * Math.PI / axes);
       const x = cx + (baseRadius + offset) * Math.cos(angle);
       let y = cy + (baseRadius + offset) * Math.sin(angle);
-      if (i === 0 || i === 1 || i === 4) y += 20;   // slightly lower Power/Speed/Defense
+      if (i === 0 || i === 1 || i === 4) y += 20;
       const val = Math.round(maxPerAxis[i] * 100) / 100;
       ctx.fillText(`(${val})`, x, y);
     });
