@@ -96,7 +96,6 @@ h1 {
   gap: 5px;
 }
 
-/* Tooltip container for the "i" */
 .info-container {
   position: relative;
   display: inline-block;
@@ -115,7 +114,6 @@ h1 {
   color: #8747e6;
 }
 
-/* Tooltip content */
 .tooltip {
   position: absolute;
   top: 125%;
@@ -309,13 +307,18 @@ button:hover {
   text-align: center;
 }
 
-/* ✅ Popup radar chart — expands downward */
+/* ----------------------------------------
+   ✅ Popup radar chart
+   • Halfway size
+   • Vertically centered relative to the image section
+---------------------------------------- */
 .overlay-chart {
   display: flex;
   justify-content: center;
-  align-items: flex-start;   /* ⬅ stays at top, grows downward */
-  width: clamp(260px, 37.5vw, 425px);
-  height: clamp(260px, 37.5vw, 425px);
+  align-items: center;
+  align-self: center; /* ⬅ vertical centering relative to the image */
+  width: clamp(235px, 33.75vw, 382.5px);
+  height: clamp(235px, 33.75vw, 382.5px);
 }
 
 #downloadBtn {
