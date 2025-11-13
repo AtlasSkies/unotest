@@ -309,13 +309,13 @@ button:hover {
   text-align: center;
 }
 
-/* ✅ 25% smaller radar chart in popup */
+/* ✅ 25% larger radar chart in popup */
 .overlay-chart {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: clamp(210px, 30vw, 340px);
-  height: clamp(210px, 30vw, 340px);
+  width: clamp(260px, 37.5vw, 425px);
+  height: clamp(260px, 37.5vw, 425px);
 }
 
 #downloadBtn {
