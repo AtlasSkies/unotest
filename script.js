@@ -1,434 +1,314 @@
-/*************************
- * GLOBAL STATE
- *************************/
-let charts = [];
-let activeIndex = 0;
-let radarPopup = null;
-
-const BASE_COLOR = '#92dfec';
-const FILL_ALPHA = 0.65;
-
-/*************************
- * HELPERS
- *************************/
-function hexToRGBA(hex, alpha) {
-  if (!hex) hex = BASE_COLOR;
-  if (hex.startsWith('rgb')) return hex.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+function clamp(v, min, max) {
+  return Math.min(max, Math.max(min, v));
 }
 
-function makeConicGradient(chart, axisColors, alpha = FILL_ALPHA) {
-  const r = chart.scales.r;
-  const ctx = chart.ctx;
-  const grad = ctx.createConicGradient(-Math.PI / 2, r.xCenter, r.yCenter);
-  const N = axisColors.length;
-  for (let i = 0; i <= N; i++) grad.addColorStop(i / N, hexToRGBA(axisColors[i % N], alpha));
-  return grad;
-}
+let uploadedImage = null;
 
-/*************************
- * PLUGINS
- *************************/
-const radarBackgroundPlugin = {
-  id: 'customPentagonBackground',
-  beforeDatasetsDraw(chart) {
-    const opts = chart.config.options.customBackground;
-    if (!opts?.enabled) return;
-    const r = chart.scales.r, ctx = chart.ctx;
-    const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
-    const N = chart.data.labels.length, start = -Math.PI / 2;
-    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    gradient.addColorStop(0, '#f8fcff');
-    gradient.addColorStop(0.33, BASE_COLOR);
-    gradient.addColorStop(1, BASE_COLOR);
-    ctx.save();
-    ctx.beginPath();
-    for (let i = 0; i < N; i++) {
-      const a = start + (i * 2 * Math.PI / N);
-      const x = cx + radius * Math.cos(a);
-      const y = cy + radius * Math.sin(a);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fillStyle = gradient;
-    ctx.fill();
-    ctx.restore();
-  },
-  afterDatasetsDraw(chart) {
-    const opts = chart.config.options.customBackground;
-    if (!opts?.enabled) return;
-    const r = chart.scales.r, ctx = chart.ctx;
-    const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
-    const N = chart.data.labels.length, start = -Math.PI / 2;
-    ctx.save();
-    ctx.beginPath();
-    for (let i = 0; i < N; i++) {
-      const a = start + (i * 2 * Math.PI / N);
-      const x = cx + radius * Math.cos(a);
-      const y = cy + radius * Math.sin(a);
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = '#35727d';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.beginPath();
-    for (let i = 0; i < N; i++) {
-      const a = start + (i * 2 * Math.PI / N);
-      const x = cx + radius * Math.cos(a);
-      const y = cy + radius * Math.sin(a);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = '#184046';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.restore();
-  }
-};
+window.addEventListener("DOMContentLoaded", () => {
 
-const axisTitlesPlugin = {
-  id: 'axisTitles',
-  afterDraw(chart) {
-    const ctx = chart.ctx,
-      r = chart.scales.r,
-      labels = chart.data.labels;
-    if (!labels) return;
-    const isPopup = chart.canvas.closest('#overlay') !== null;
-    const cx = r.xCenter,
-      cy = r.yCenter,
-      base = -Math.PI / 2,
-      baseRadius = r.drawingArea * 1.1;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = 'italic 18px Candara';
-    ctx.strokeStyle = '#8747e6';
-    ctx.fillStyle = 'white';
-    ctx.lineWidth = 4;
-    labels.forEach((label, i) => {
-      const a = base + (i * 2 * Math.PI / labels.length);
-      const x = cx + baseRadius * Math.cos(a);
-      let y = cy + baseRadius * Math.sin(a);
-      if (i === 0) y -= 5;
-      if (isPopup && (i === 1 || i === 4)) y -= 25;
-      ctx.strokeText(label, x, y);
-      ctx.fillText(label, x, y);
-    });
-    ctx.restore();
-  }
-};
+  const previewCanvas = document.getElementById("fullChartCanvas");
+  const previewCtx = previewCanvas.getContext("2d");
 
-const globalValueLabelsPlugin = {
-  id: 'globalValueLabels',
-  afterDraw(chart) {
-    if (chart.canvas.closest('#overlay')) return;
-    const ctx = chart.ctx,
-      r = chart.scales.r,
-      labels = chart.data.labels,
-      cx = r.xCenter,
-      cy = r.yCenter,
-      base = -Math.PI / 2,
-      baseRadius = r.drawingArea * 1.1,
-      offset = 20;
-    const axes = labels.length;
-    const maxPerAxis = new Array(axes).fill(0);
-    charts.forEach(c => {
-      for (let i = 0; i < axes; i++)
-        maxPerAxis[i] = Math.max(maxPerAxis[i], c.stats[i] || 0);
-    });
-    ctx.save();
-    ctx.font = '15px Candara';
-    ctx.fillStyle = 'black';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    labels.forEach((_, i) => {
-      const angle = base + (i * 2 * Math.PI / axes);
-      const x = cx + (baseRadius + offset) * Math.cos(angle);
-      let y = cy + (baseRadius + offset) * Math.sin(angle);
-      if (i === 0 || i === 1 || i === 4) y += 20;
-      const val = Math.round(maxPerAxis[i] * 100) / 100;
-      ctx.fillText(`(${val})`, x, y);
-    });
-    ctx.restore();
-  }
-};
+  const modalCanvas = document.getElementById("modalChartCanvas");
+  const modalCtx = modalCanvas.getContext("2d");
 
-/*************************
- * CHART CREATION
- *************************/
-function makeRadar(ctx, color, withBackground = false) {
-  return new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
-      datasets: [{
-        data: [0, 0, 0, 0, 0],
-        backgroundColor: hexToRGBA(color, FILL_ALPHA),
-        borderColor: color,
-        borderWidth: 2,
-        pointBackgroundColor: '#fff',
-        pointBorderColor: color,
-        pointRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      layout: { padding: { top: 25, bottom: 25, left: 10, right: 10 } },
-      scales: {
-        r: {
-          min: 0,
-          max: 10,
-          ticks: { display: false },
-          grid: { display: false },
-          angleLines: { color: '#6db5c0', lineWidth: 1 },
-          pointLabels: { color: 'transparent' }
-        }
-      },
-      customBackground: { enabled: withBackground },
-      plugins: { legend: { display: false } }
-    },
-    plugins: [axisTitlesPlugin, radarBackgroundPlugin, globalValueLabelsPlugin]
-  });
-}
+  const imageUpload = document.getElementById("imageUpload");
+  const imagePreview = document.getElementById("imagePreview");
 
-/*************************
- * DOM
- *************************/
-const chartArea = document.getElementById('chartArea'),
-  addChartBtn = document.getElementById('addChartBtn'),
-  chartButtons = document.getElementById('chartButtons'),
-  powerInput = document.getElementById('powerInput'),
-  speedInput = document.getElementById('speedInput'),
-  trickInput = document.getElementById('trickInput'),
-  recoveryInput = document.getElementById('recoveryInput'),
-  defenseInput = document.getElementById('defenseInput'),
-  colorPicker = document.getElementById('colorPicker'),
-  multiColorBtn = document.getElementById('multiColorBtn'),
-  axisColorsDiv = document.getElementById('axisColors'),
-  axisColorPickers = [
-    document.getElementById('powerColor'),
-    document.getElementById('speedColor'),
-    document.getElementById('trickColor'),
-    document.getElementById('recoveryColor'),
-    document.getElementById('defenseColor')
-  ],
-  viewBtn = document.getElementById('viewBtn'),
-  overlay = document.getElementById('overlay'),
-  closeBtn = document.getElementById('closeBtn'),
-  downloadBtn = document.getElementById('downloadBtn'),
-  uploadedImg = document.getElementById('uploadedImg'),
-  imgInput = document.getElementById('imgInput'),
-  overlayImg = document.getElementById('overlayImg'),
-  overlayName = document.getElementById('overlayName'),
-  overlayAbility = document.getElementById('overlayAbility'),
-  overlayLevel = document.getElementById('overlayLevel'),
-  nameInput = document.getElementById('nameInput'),
-  abilityInput = document.getElementById('abilityInput'),
-  levelInput = document.getElementById('levelInput');
+  const charName = document.getElementById("charName");
+  const charIdLetters = document.getElementById("charIdLetters");
+  const charIdNumbers = document.getElementById("charIdNumbers");
 
-/*************************
- * INIT
- *************************/
-window.addEventListener('load', () => {
-  addChart();
-  selectChart(0);
-  refreshAll();
-});
+  const charSpecies = document.getElementById("charSpecies");
+  const charAbility = document.getElementById("charAbility");
+  const charGod = document.getElementById("charGod");
+  const charDanger = document.getElementById("charDanger");
+  const charLevel = document.getElementById("charLevel");
 
-/*************************
- * ADD / SELECT
- *************************/
-function addChart() {
-  const canvas = document.createElement('canvas');
-  canvas.className = 'layer';
-  canvas.style.position = 'absolute';
-  canvas.style.inset = '0';
-  canvas.style.zIndex = charts.length + '';
-  chartArea.appendChild(canvas);
-  const color =
-    charts.length === 0
-      ? BASE_COLOR
-      : `hsl(${Math.floor(Math.random() * 360)},70%,55%)`;
-  const chart = makeRadar(canvas.getContext('2d'), color, false);
-  const cObj = {
-    chart,
-    canvas,
-    color,
-    stats: [0, 0, 0, 0, 0],
-    multi: false,
-    axis: axisColorPickers.map(p => p.value)
+  const overall = document.getElementById("redacted");
+
+  const statInputs = {
+    energy: document.getElementById("statEnergy"),
+    speed: document.getElementById("statSpeed"),
+    support: document.getElementById("statSupport"),
+    power: document.getElementById("statPower"),
+    intelligence: document.getElementById("statIntelligence"),
+    concentration: document.getElementById("statConcentration"),
+    perception: document.getElementById("statPerception")
   };
-  charts.push(cObj);
-  const idx = charts.length - 1;
-  const btn = document.createElement('button');
-  btn.textContent = `Select Chart ${idx + 1}`;
-  btn.addEventListener('click', () => selectChart(idx));
-  chartButtons.appendChild(btn);
-}
 
-function selectChart(index) {
-  activeIndex = index;
-  chartButtons.querySelectorAll('button').forEach((b, i) => {
-    b.style.backgroundColor = i === index ? '#6db5c0' : '#92dfec';
-    b.style.color = i === index ? '#fff' : '#000';
+  const viewBtn = document.getElementById("viewChartBtn");
+  const modal = document.getElementById("chartModal");
+  const closeBtn = document.getElementById("closeModalBtn");
+  const modalImage = document.getElementById("modalImage");
+  const modalInfo = document.getElementById("modalInfo");
+  const fileTypeGod = document.getElementById("fileTypeGod");
+  const downloadBtn = document.getElementById("modalDownloadBtn");
+
+  /* --------------------------------------------- */
+  /* IMAGE UPLOAD + AUTO-FIT PREVIEW               */
+  /* --------------------------------------------- */
+  imageUpload.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        uploadedImage = img;
+        imagePreview.src = img.src;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
   });
-  const c = charts[index];
-  [powerInput, speedInput, trickInput, recoveryInput, defenseInput].forEach(
-    (el, i) => (el.value = c.stats[i])
-  );
-  colorPicker.value = c.color;
-  multiColorBtn.textContent = c.multi ? 'Single-color' : 'Multi-color';
-  axisColorsDiv.style.display = c.multi ? 'flex' : 'none';
-}
 
-/*************************
- * UPDATE
- *************************/
-function refreshAll() {
-  charts.forEach(obj => {
-    const ds = obj.chart.data.datasets[0];
-    const fill = obj.multi
-      ? makeConicGradient(obj.chart, obj.axis, FILL_ALPHA)
-      : hexToRGBA(obj.color, FILL_ALPHA);
-    ds.data = obj.stats.map(v => Math.min(v, 10)); // cap at 10
-    ds.borderColor = obj.color;
-    ds.pointBorderColor = obj.color;
-    ds.backgroundColor = fill;
-    obj.chart.update();
+  /* --------------------------------------------- */
+  /* CHARACTER ID INPUTS                           */
+  /* --------------------------------------------- */
+  charIdLetters.addEventListener("input", () => {
+    charIdLetters.value = charIdLetters.value.replace(/[^A-Za-z]/g, "").toUpperCase();
   });
-}
 
-function refreshActiveFromInputs() {
-  const c = charts[activeIndex];
-  c.stats = [
-    +powerInput.value || 0,
-    +speedInput.value || 0,
-    +trickInput.value || 0,
-    +recoveryInput.value || 0,
-    +defenseInput.value || 0
-  ];
-  c.color = colorPicker.value;
-  c.axis = axisColorPickers.map(p => p.value);
-  refreshAll();
-}
+  charIdNumbers.addEventListener("input", () => {
+    charIdNumbers.value = charIdNumbers.value.replace(/[^0-9]/g, "");
+  });
 
-/*************************
- * LISTENERS
- *************************/
-addChartBtn.addEventListener('click', addChart);
-[powerInput, speedInput, trickInput, recoveryInput, defenseInput].forEach(el =>
-  el.addEventListener('input', refreshActiveFromInputs)
-);
-colorPicker.addEventListener('input', () => {
-  charts[activeIndex].color = colorPicker.value;
-  refreshAll();
-});
-axisColorPickers.forEach(p =>
-  p.addEventListener('input', () => {
-    if (charts[activeIndex].multi) {
-      charts[activeIndex].axis = axisColorPickers.map(p => p.value);
-      refreshAll();
+  function getCharacterID() {
+    const letters = charIdLetters.value;
+    const numbers = charIdNumbers.value;
+    if (letters.length === 3 && numbers.length === 9) {
+      return `${letters}-${numbers}`;
     }
-  })
-);
-multiColorBtn.addEventListener('click', () => {
-  const c = charts[activeIndex];
-  c.multi = !c.multi;
-  multiColorBtn.textContent = c.multi ? 'Single-color' : 'Multi-color';
-  axisColorsDiv.style.display = c.multi ? 'flex' : 'none';
-  refreshAll();
-});
-imgInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const r = new FileReader();
-  r.onload = ev => (uploadedImg.src = ev.target.result);
-  r.readAsDataURL(file);
-});
+    return "Unknown";
+  }
 
-/*************************
- * POPUP
- *************************/
-viewBtn.addEventListener('click', () => {
-  overlay.classList.remove('hidden');
-  overlayImg.src = uploadedImg.src;
-  overlayName.textContent = nameInput.value || '-';
-  overlayAbility.textContent = abilityInput.value || '-';
-  overlayLevel.textContent = levelInput.value || '-';
+  /* --------------------------------------------- */
+  /* STATS                                         */
+  /* --------------------------------------------- */
+  function getStats() {
+    return [
+      clamp(parseFloat(statInputs.energy.value), 1, 10),
+      clamp(parseFloat(statInputs.speed.value), 1, 10),
+      clamp(parseFloat(statInputs.support.value), 1, 10),
+      clamp(parseFloat(statInputs.power.value), 1, 10),
+      clamp(parseFloat(statInputs.intelligence.value), 1, 10),
+      clamp(parseFloat(statInputs.concentration.value), 1, 10),
+      clamp(parseFloat(statInputs.perception.value), 1, 10)
+    ];
+  }
 
-  const ctx = document.getElementById('overlayChartCanvas').getContext('2d');
-  const ds = charts.map(c => ({
-    data: c.stats.map(v => Math.min(v, 10)), // cap at 10 always
-    backgroundColor: hexToRGBA(c.color, FILL_ALPHA),
-    borderColor: c.color,
-    borderWidth: 2,
-    pointRadius: 0
-  }));
+  function getOverall() {
+    return clamp(parseFloat(overall.value), 1, 10);
+  }
 
-  if (radarPopup) radarPopup.destroy();
-  radarPopup = new Chart(ctx, {
-    type: 'radar',
-    data: { labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'], datasets: ds },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      layout: { padding: { top: 25, bottom: 25, left: 10, right: 10 } },
-      scales: {
-        r: {
-          min: 0,
-          max: 10, // cap chart to 10 always
-          ticks: { display: false },
-          grid: { display: false },
-          angleLines: { color: '#6db5c0', lineWidth: 1 },
-          pointLabels: { color: 'transparent' }
-        }
-      },
-      customBackground: { enabled: true },
-      plugins: { legend: { display: false } }
-    },
-    plugins: [radarBackgroundPlugin, axisTitlesPlugin]
+  function computeLevel(stats, ov) {
+    return stats.reduce((a, b) => a + b, 0) + ov * 3;
+  }
+
+  /* --------------------------------------------- */
+  /* DRAW CHART (sunburst + ring hugging it)       */
+  /* --------------------------------------------- */
+  function drawChart(ctx, canvas, stats, overallVal) {
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const secCount = 7;
+    const rings = 10;
+
+    /* Sunburst bigger */
+    const sunburstScale = 1.08;
+
+    /* Base scale for ring thickness */
+    const ringScale = 0.85;
+
+    const maxRadius = (w / 2) * sunburstScale;
+
+    const inner = 0;                // start sunburst at center
+    const outer = maxRadius * 0.78; // outer radius of sunburst
+    const ringT = (outer - inner) / rings;
+
+    const secA = (2 * Math.PI) / secCount;
+    const hues = [0, 30, 55, 130, 210, 255, 280];
+
+    /* --------- SUNBURST --------- */
+    for (let i = 0; i < secCount; i++) {
+
+      const a0 = -Math.PI / 2 + i * secA;
+      const a1 = a0 + secA;
+
+      const val = stats[i];
+      const hue = hues[i];
+
+      for (let r = 0; r < val; r++) {
+        const rIn = inner + r * ringT;
+        const rOut = rIn + ringT;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, rOut, a0, a1);
+        ctx.arc(cx, cy, rIn, a1, a0, true);
+        ctx.closePath();
+
+        ctx.fillStyle = `hsl(${hue}, ${45 + r * 4}%, ${72 - r * 4}%)`;
+        ctx.fill();
+      }
+    }
+
+    /* Center circle */
+    ctx.beginPath();
+    ctx.arc(cx, cy, outer * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+
+    /* --------- OUTER RING (hugging the sunburst) --------- */
+
+    const ringGap = 0; // no space between sunburst and ring
+    const baseRingThickness = 30 * ringScale; // thickness of ring
+
+    const ringIn = outer + ringGap;              // starts right at sunburst edge
+    const ringOut = ringIn + baseRingThickness;  // extends outward by thickness
+
+    const wedgeA = (2 * Math.PI) / 10;
+
+    /* Background ring */
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringOut, 0, Math.PI * 2);
+    ctx.arc(cx, cy, ringIn, Math.PI * 2, 0, true);
+    ctx.closePath();
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+
+    const full = Math.floor(overallVal);
+    const frac = overallVal - full;
+
+    function wedgeColor(i) {
+      return `hsl(220, 30%, ${70 - i * 4}%)`;
+    }
+
+    /* Full wedges */
+    for (let i = 0; i < full; i++) {
+      const a0 = -Math.PI / 2 + i * wedgeA;
+      const a1 = a0 + wedgeA;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringOut, a0, a1);
+      ctx.arc(cx, cy, ringIn, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = wedgeColor(i);
+      ctx.fill();
+    }
+
+    /* Fractional wedge */
+    if (frac > 0) {
+      const i = full;
+      const a0 = -Math.PI / 2 + i * wedgeA;
+      const a1 = a0 + wedgeA * frac;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringOut, a0, a1);
+      ctx.arc(cx, cy, ringIn, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = wedgeColor(i);
+      ctx.fill();
+    }
+  }
+
+  /* --------------------------------------------- */
+  /* LIVE PREVIEW                                  */
+  /* --------------------------------------------- */
+  function updatePreview() {
+    const stats = getStats();
+    const ov = getOverall();
+    charLevel.value = computeLevel(stats, ov).toFixed(1);
+    drawChart(previewCtx, previewCanvas, stats, ov);
+  }
+
+  Object.values(statInputs).forEach(i => i.addEventListener("input", updatePreview));
+  overall.addEventListener("input", updatePreview);
+
+  updatePreview();
+
+  /* --------------------------------------------- */
+  /* OPEN POPUP                                    */
+  /* --------------------------------------------- */
+  viewBtn.addEventListener("click", () => {
+    const stats = getStats();
+    const ov = getOverall();
+    const lvl = computeLevel(stats, ov);
+
+    charLevel.value = lvl.toFixed(1);
+    fileTypeGod.textContent = charGod.value;
+
+    modalImage.src = uploadedImage ? uploadedImage.src : "";
+
+    modalInfo.innerHTML =
+      `<div><span class="label">Name:</span> ${charName.value || "Unknown"}</div>
+       <div><span class="label">Character ID:</span> ${getCharacterID()}</div>
+       <div><span class="label">Species:</span> ${charSpecies.value || "Unknown"}</div>
+       <div><span class="label">Ability:</span> ${charAbility.value || "Unknown"}</div>
+       <div><span class="label">Patron God:</span> ${charGod.value}</div>
+       <div><span class="label">Danger Level:</span> ${charDanger.value}</div>
+       <div><span class="label">Level Index:</span> ${lvl.toFixed(1)}</div>`;
+
+    drawChart(modalCtx, modalCanvas, stats, ov);
+
+    modal.classList.remove("hidden");
   });
 
-  requestAnimationFrame(() => {
-    radarPopup.data.datasets.forEach((dataset, i) => {
-      const src = charts[i];
-      dataset.backgroundColor = src.multi
-        ? makeConicGradient(radarPopup, src.axis, FILL_ALPHA)
-        : hexToRGBA(src.color, FILL_ALPHA);
+  /* --------------------------------------------- */
+  /* CLOSE POPUP                                   */
+  /* --------------------------------------------- */
+  closeBtn.addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+
+  /* --------------------------------------------- */
+  /* DOWNLOAD CHART                                */
+  /* --------------------------------------------- */
+  downloadBtn.addEventListener("click", () => {
+
+    const wrap = document.getElementById("modalWrapper");
+    const rect = wrap.getBoundingClientRect();
+
+    const tmp = document.createElement("canvas");
+    tmp.width = rect.width * 2;
+    tmp.height = rect.height * 2;
+
+    const tctx = tmp.getContext("2d");
+    tctx.scale(2, 2);
+
+    tctx.fillStyle = "#ffffff";
+    tctx.fillRect(0, 0, rect.width, rect.height);
+
+    /* Render image */
+    if (uploadedImage) {
+      tctx.drawImage(modalImage, 10, 10, 240, 300);
+    }
+
+    /* Render text */
+    tctx.fillStyle = "#000";
+    tctx.font = "18px Georgia";
+    let y = 330;
+    modalInfo.innerText.split("\n").forEach(line => {
+      tctx.fillText(line, 10, y);
+      y += 26;
     });
-    radarPopup.update();
-  });
-});
 
-closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
+    /* Render chart */
+    tctx.drawImage(modalCanvas, 350, 10);
 
-/*************************
- * DOWNLOAD (guaranteed)
- *************************/
-downloadBtn.addEventListener('click', async () => {
-  const box = document.getElementById('characterBox');
-  window.scrollTo(0, 0);
-  downloadBtn.style.visibility = 'hidden';
-  closeBtn.style.visibility = 'hidden';
-
-  await html2canvas(box, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: null,
-    logging: false
-  }).then(canvas => {
-    const link = document.createElement('a');
-    const cleanName = (nameInput.value || 'Unnamed').replace(/\s+/g, '_');
-    link.download = `${cleanName}_CharacterChart.png`;
-    link.href = canvas.toDataURL('image/png');
+    /* Download */
+    const name = (charName.value || "character").replace(/\s+/g, "");
+    const link = document.createElement("a");
+    link.download = `${name}_mr_characterchart.png`;
+    link.href = tmp.toDataURL();
     link.click();
   });
 
-  downloadBtn.style.visibility = 'visible';
-  closeBtn.style.visibility = 'visible';
 });
