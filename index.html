@@ -1,189 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Character Ability Chart</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UnOrdinary Ability Chart Maker</title>
+
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
+
 <body>
-
-  <div class="page-container">
-    <header>
-      <h1>Character Ability Chart</h1>
-      <p class="subtitle">Ruins Archive Registry</p>
-    </header>
-
-    <main>
-
-      <!-- LEFT PANEL -->
-      <section class="form-section">
-
-        <h2>Character Information</h2>
-
-        <div class="form-grid">
-
-          <label>
-            Name
-            <input id="charName" type="text">
-          </label>
-
-          <label>
-            Character ID
-            <div class="id-row">
-              <input id="charIdLetters" type="text" maxlength="3" placeholder="ABC">
-              <span class="id-dash">—</span>
-              <input id="charIdNumbers" type="text" maxlength="9" placeholder="123456789">
+  <div class="container">
+    <div class="left">
+      <div class="header-with-info">
+        <div class="title-block">
+          <h1>UnOrdinary Ability Chart Maker</h1>
+          <div class="subtitle">
+            By Atlas Skies
+            <div class="info-container">
+              <span class="info-icon">ℹ️</span>
+              <div class="tooltip">
+                Credit to Atlas Skies would be greatly appreciated, but not necessary.<br>
+                If you're Uru-Chan, I love the comic — feel free to use this, lol.
+              </div>
             </div>
-          </label>
+          </div>
+        </div>
+      </div>
 
-          <label>
-            Species
-            <input id="charSpecies" type="text">
-          </label>
+      <input type="file" accept="image/*" id="imgInput" />
+      <img id="uploadedImg" class="upload-img" alt="Uploaded Image" />
 
-          <label>
-            Ability
-            <input id="charAbility" type="text">
-          </label>
+      <div class="info-box">
+        <label><b>Name:</b> <input type="text" id="nameInput" /></label>
+        <label><b>Ability:</b> <input type="text" id="abilityInput" /></label>
+        <label><b>Level:</b> <input type="text" id="levelInput" /></label>
+      </div>
 
-          <label>
-            Patron God
-            <select id="charGod">
-              <option selected>Unknown</option>
-              <option>Dead</option>
-              <option>Echara</option>
-              <option>Jericho</option>
-              <option>Metrador</option>
-              <option>Ormir</option>
-              <option>Phosiris</option>
-              <option>Remora</option>
-              <option>Shakur</option>
-              <option>Skylar</option>
-              <option>The Ruins</option>
-              <option>Willow</option>
-              <option>Zane</option>
-            </select>
-          </label>
+      <div class="inputs">
+        <label>Power: <input type="number" id="powerInput" step="0.1" min="0" /></label>
+        <label>Speed: <input type="number" id="speedInput" step="0.1" min="0" /></label>
+        <label>Trick: <input type="number" id="trickInput" step="0.1" min="0" /></label>
+        <label>Recovery: <input type="number" id="recoveryInput" step="0.1" min="0" /></label>
+        <label>Defense: <input type="number" id="defenseInput" step="0.1" min="0" /></label>
 
-          <label>
-            Danger Level
-            <select id="charDanger">
-              <option>None</option>
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-              <option>Ultra</option>
-            </select>
-          </label>
+        <label>Ability Color: <input type="color" id="colorPicker" value="#92dfec" /></label>
 
-          <label>
-            Level
-            <input id="charLevel" type="text" readonly>
-          </label>
-
+        <button id="multiColorBtn">Multi-color</button>
+        <div id="axisColors">
+          <label>Power Color: <input type="color" id="powerColor" value="#92dfec" /></label>
+          <label>Speed Color: <input type="color" id="speedColor" value="#92dfec" /></label>
+          <label>Trick Color: <input type="color" id="trickColor" value="#92dfec" /></label>
+          <label>Recovery Color: <input type="color" id="recoveryColor" value="#92dfec" /></label>
+          <label>Defense Color: <input type="color" id="defenseColor" value="#92dfec" /></label>
         </div>
 
-        <h2>Stats (1–10)</h2>
+        <button id="addChartBtn">Add Chart</button>
+        <div id="chartButtons"></div>
 
-        <div class="form-grid stats-grid">
-          <label>
-            [Redacted]
-            <input id="redacted" type="number" min="1" max="10" step="0.1" value="7.5">
-          </label>
-          <label>
-            Energy
-            <input id="statEnergy" type="number" min="1" max="10" step="0.1" value="7">
-          </label>
-          <label>
-            Speed
-            <input id="statSpeed" type="number" min="1" max="10" step="0.1" value="6">
-          </label>
-          <label>
-            Support
-            <input id="statSupport" type="number" min="1" max="10" step="0.1" value="5">
-          </label>
-          <label>
-            Power
-            <input id="statPower" type="number" min="1" max="10" step="0.1" value="8">
-          </label>
-          <label>
-            Intelligence
-            <input id="statIntelligence" type="number" min="1" max="10" step="0.1" value="9">
-          </label>
-          <label>
-            Concentration
-            <input id="statConcentration" type="number" min="1" max="10" step="0.1" value="7">
-          </label>
-          <label>
-            Perception
-            <input id="statPerception" type="number" min="1" max="10" step="0.1" value="6">
-          </label>
-        </div>
+        <button id="viewBtn">View Character Chart</button>
+      </div>
+    </div>
 
-        <h2>Character Image</h2>
-
-        <label class="file-label">
-          Upload Image
-          <input id="imageUpload" type="file" accept="image/*">
-        </label>
-
-        <img id="imagePreview" alt="Character Preview">
-
-        <div class="button-row">
-          <button id="viewChartBtn">View Character Chart</button>
-        </div>
-
-      </section>
-
-      <!-- RIGHT PANEL -->
-      <section class="chart-section">
-        <h2>Chart Preview</h2>
-        <canvas id="fullChartCanvas" width="450" height="450"></canvas>
-      </section>
-
-    </main>
+    <div class="chart-area" id="chartArea"></div>
   </div>
 
-  <!-- POPUP -->
-  <div id="chartModal" class="modal hidden">
-    <div class="modal-content">
+  <!-- Overlay -->
+  <div id="overlay" class="overlay hidden">
+    <div id="characterBox" class="character-box">
+      <button id="closeBtn" class="close-btn">×</button>
 
-      <button id="closeModalBtn" class="close-btn">✕</button>
-
-      <div class="gov-header">
-        <div class="gov-title-main">Ruins Archive</div>
-        <div class="gov-title-sub">File Type: <span id="fileTypeGod"></span> Dossier</div>
+      <div class="image-section">
+        <div class="overlay-img-wrap">
+          <img id="overlayImg" class="overlay-img" alt="Character Image" />
+          <div class="img-watermark">AS</div>
+        </div>
+        <div class="text-box">
+          <b>Name:</b> <span id="overlayName">-</span><br />
+          <b>Ability:</b> <span id="overlayAbility">-</span><br />
+          <b>Level:</b> <span id="overlayLevel">-</span>
+        </div>
       </div>
 
-      <div id="modalWrapper">
-
-        <div class="modal-left">
-          <div class="modal-parchment">
-            <div class="modal-image-frame">
-              <img id="modalImage" alt="Character Image">
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-center">
-          <div id="modalInfo" class="modal-info-block"></div>
-        </div>
-
-        <div class="modal-right">
-          <div class="chart-frame">
-            <div class="chart-frame-label">Ruins Power Wheel</div>
-            <canvas id="modalChartCanvas" width="350" height="350"></canvas>
-          </div>
-
-          <button id="modalDownloadBtn" class="download-btn">
-            Download Character Chart
-          </button>
-        </div>
-
+      <div class="overlay-chart">
+        <canvas id="overlayChartCanvas"></canvas>
       </div>
+
+      <button id="downloadBtn">Download Character Chart</button>
     </div>
   </div>
 
+  <script src="script.js"></script>
 </body>
 </html>
