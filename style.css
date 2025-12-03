@@ -52,7 +52,7 @@ body {
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: 30px;
+  gap: 24px;
   max-width: 1200px;
   width: 100%;
 }
@@ -61,7 +61,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 10px; /* tighter */
   min-width: 300px;
 }
 
@@ -69,7 +69,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 6px; /* tighter */
 }
 
 .title-block {
@@ -152,55 +152,60 @@ h1 {
 .info-box {
   background-color: white;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px; /* tighter */
   width: clamp(180px, 25vw, 250px);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px; /* tighter */
 }
 
 .info-box label {
   display: flex;
   justify-content: space-between;
   font-weight: bold;
-  font-size: 15px;
+  font-size: 14px; /* slightly smaller */
 }
 
+/* ============================
+   INPUT STACK TIGHTENING
+============================ */
 .inputs {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;           /* was 8px – closer together */
   align-items: center;
+  margin-top: 4px;
 }
 
 label {
   font-style: italic;
-  font-size: 15px;
+  font-size: 14px;    /* slightly smaller */
   display: flex;
   justify-content: space-between;
-  width: clamp(200px, 80%, 260px);
+  align-items: center;
+  width: clamp(200px, 80%, 240px); /* a bit narrower */
 }
 
 input[type="number"], input[type="text"] {
-  width: 110px;
+  width: 95px;         /* narrower */
   border-radius: 4px;
   border: 1px solid #ccc;
-  padding: 4px;
+  padding: 3px 4px;    /* tighter vertically */
   font-family: 'Carlito';
 }
 
 input[type="color"] {
   border: none;
   background: none;
-  width: 60px;
-  height: 40px;
+  width: 52px;
+  height: 32px;
   cursor: pointer;
 }
 
 button {
-  margin-top: 8px;
-  padding: 6px 12px;
+  margin-top: 4px;     /* tighter */
+  padding: 5px 10px;
   font-family: 'Carlito';
   font-weight: bold;
   background-color: #92dfec;
@@ -224,7 +229,7 @@ button:hover {
 #axisColors {
   display: none;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;           /* tighter between axis color inputs */
   align-items: center;
 }
 
@@ -258,9 +263,9 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 40px;
+  gap: 32px;     /* slightly tighter */
   overflow: hidden;
-  padding: 20px;
+  padding: 18px; /* slightly tighter */
 }
 
 .close-btn {
@@ -277,7 +282,7 @@ button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
+  position: relative; /* needed for overlap */
 }
 
 .overlay-img-wrap {
@@ -305,15 +310,22 @@ button:hover {
   letter-spacing: 1px;
 }
 
+/* ============================
+   TEXT BOX OVERLAPPING IMAGE
+============================ */
 .text-box {
   position: absolute;
-  bottom: -45px;
-  width: 80%;
-  background: white;
+  /* overlap bottom portion of the image */
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 85%;
+  background: rgba(255, 255, 255, 0.92); /* slightly transparent over image */
   border: 3px solid #493e3b;
-  padding: 10px;
+  padding: 8px;
   font-family: 'Carlito';
   text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* =======================================================
@@ -346,7 +358,7 @@ button:hover {
     width: 90vw; 
     max-height: 90vh;
     padding: 15px; 
-    gap: 20px;
+    gap: 18px;
     overflow-y: auto;
   }
 
@@ -354,5 +366,10 @@ button:hover {
     width: 70vw; 
     height: auto; 
     max-height: 35vh;
+  }
+
+  .text-box {
+    width: 90%;
+    bottom: 10px;
   }
 }
