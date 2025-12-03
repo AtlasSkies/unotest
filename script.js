@@ -1,314 +1,220 @@
-function clamp(v, min, max) {
-  return Math.min(max, Math.max(min, v));
+/*************************
+ * GLOBAL STATE
+ *************************/
+let charts = [];
+let activeIndex = 0;
+let radarPopup = null;
+
+const BASE_COLOR = '#92dfec';
+const FILL_ALPHA = 0.65;
+
+/*************************
+ * HELPERS
+ *************************/
+function hexToRGBA(hex, alpha) {
+  if (!hex) hex = BASE_COLOR;
+  if (hex.startsWith('rgb')) return hex.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
-let uploadedImage = null;
+function makeConicGradient(chart, axisColors, alpha = FILL_ALPHA) {
+  const r = chart.scales.r;
+  const ctx = chart.ctx;
+  const grad = ctx.createConicGradient(-Math.PI / 2, r.xCenter, r.yCenter);
+  const N = axisColors.length;
+  for (let i = 0; i <= N; i++) grad.addColorStop(i / N, hexToRGBA(axisColors[i % N], alpha));
+  return grad;
+}
 
-window.addEventListener("DOMContentLoaded", () => {
-
-  const previewCanvas = document.getElementById("fullChartCanvas");
-  const previewCtx = previewCanvas.getContext("2d");
-
-  const modalCanvas = document.getElementById("modalChartCanvas");
-  const modalCtx = modalCanvas.getContext("2d");
-
-  const imageUpload = document.getElementById("imageUpload");
-  const imagePreview = document.getElementById("imagePreview");
-
-  const charName = document.getElementById("charName");
-  const charIdLetters = document.getElementById("charIdLetters");
-  const charIdNumbers = document.getElementById("charIdNumbers");
-
-  const charSpecies = document.getElementById("charSpecies");
-  const charAbility = document.getElementById("charAbility");
-  const charGod = document.getElementById("charGod");
-  const charDanger = document.getElementById("charDanger");
-  const charLevel = document.getElementById("charLevel");
-
-  const overall = document.getElementById("redacted");
-
-  const statInputs = {
-    energy: document.getElementById("statEnergy"),
-    speed: document.getElementById("statSpeed"),
-    support: document.getElementById("statSupport"),
-    power: document.getElementById("statPower"),
-    intelligence: document.getElementById("statIntelligence"),
-    concentration: document.getElementById("statConcentration"),
-    perception: document.getElementById("statPerception")
-  };
-
-  const viewBtn = document.getElementById("viewChartBtn");
-  const modal = document.getElementById("chartModal");
-  const closeBtn = document.getElementById("closeModalBtn");
-  const modalImage = document.getElementById("modalImage");
-  const modalInfo = document.getElementById("modalInfo");
-  const fileTypeGod = document.getElementById("fileTypeGod");
-  const downloadBtn = document.getElementById("modalDownloadBtn");
-
-  /* --------------------------------------------- */
-  /* IMAGE UPLOAD + AUTO-FIT PREVIEW               */
-  /* --------------------------------------------- */
-  imageUpload.addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        uploadedImage = img;
-        imagePreview.src = img.src;
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-
-  /* --------------------------------------------- */
-  /* CHARACTER ID INPUTS                           */
-  /* --------------------------------------------- */
-  charIdLetters.addEventListener("input", () => {
-    charIdLetters.value = charIdLetters.value.replace(/[^A-Za-z]/g, "").toUpperCase();
-  });
-
-  charIdNumbers.addEventListener("input", () => {
-    charIdNumbers.value = charIdNumbers.value.replace(/[^0-9]/g, "");
-  });
-
-  function getCharacterID() {
-    const letters = charIdLetters.value;
-    const numbers = charIdNumbers.value;
-    if (letters.length === 3 && numbers.length === 9) {
-      return `${letters}-${numbers}`;
-    }
-    return "Unknown";
+/**
+ * Get the color that axis titles should use.
+ * Always use the selected ability color of the FIRST chart (charts[0]),
+ * falling back to BASE_COLOR if needed.
+ */
+function getFirstAbilityColor() {
+  if (Array.isArray(charts) && charts.length > 0) {
+    return charts[0].color || BASE_COLOR;
   }
+  return BASE_COLOR;
+}
 
-  /* --------------------------------------------- */
-  /* STATS                                         */
-  /* --------------------------------------------- */
-  function getStats() {
-    return [
-      clamp(parseFloat(statInputs.energy.value), 1, 10),
-      clamp(parseFloat(statInputs.speed.value), 1, 10),
-      clamp(parseFloat(statInputs.support.value), 1, 10),
-      clamp(parseFloat(statInputs.power.value), 1, 10),
-      clamp(parseFloat(statInputs.intelligence.value), 1, 10),
-      clamp(parseFloat(statInputs.concentration.value), 1, 10),
-      clamp(parseFloat(statInputs.perception.value), 1, 10)
-    ];
-  }
-
-  function getOverall() {
-    return clamp(parseFloat(overall.value), 1, 10);
-  }
-
-  function computeLevel(stats, ov) {
-    return stats.reduce((a, b) => a + b, 0) + ov * 3;
-  }
-
-  /* --------------------------------------------- */
-  /* DRAW CHART (sunburst + ring hugging it)       */
-  /* --------------------------------------------- */
-  function drawChart(ctx, canvas, stats, overallVal) {
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-
-    ctx.clearRect(0, 0, w, h);
-
-    const secCount = 7;
-    const rings = 10;
-
-    /* Sunburst bigger */
-    const sunburstScale = 1.08;
-
-    /* Base scale for ring thickness */
-    const ringScale = 0.85;
-
-    const maxRadius = (w / 2) * sunburstScale;
-
-    const inner = 0;                // start sunburst at center
-    const outer = maxRadius * 0.78; // outer radius of sunburst
-    const ringT = (outer - inner) / rings;
-
-    const secA = (2 * Math.PI) / secCount;
-    const hues = [0, 30, 55, 130, 210, 255, 280];
-
-    /* --------- SUNBURST --------- */
-    for (let i = 0; i < secCount; i++) {
-
-      const a0 = -Math.PI / 2 + i * secA;
-      const a1 = a0 + secA;
-
-      const val = stats[i];
-      const hue = hues[i];
-
-      for (let r = 0; r < val; r++) {
-        const rIn = inner + r * ringT;
-        const rOut = rIn + ringT;
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, rOut, a0, a1);
-        ctx.arc(cx, cy, rIn, a1, a0, true);
-        ctx.closePath();
-
-        ctx.fillStyle = `hsl(${hue}, ${45 + r * 4}%, ${72 - r * 4}%)`;
-        ctx.fill();
-      }
-    }
-
-    /* Center circle */
+/*************************
+ * PLUGINS
+ *************************/
+const radarBackgroundPlugin = {
+  id: 'customPentagonBackground',
+  beforeDatasetsDraw(chart) {
+    const opts = chart.config.options.customBackground;
+    if (!opts?.enabled) return;
+    const r = chart.scales.r, ctx = chart.ctx;
+    const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
+    const N = chart.data.labels.length, start = -Math.PI / 2;
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    gradient.addColorStop(0, '#f8fcff');
+    gradient.addColorStop(0.33, BASE_COLOR);
+    gradient.addColorStop(1, BASE_COLOR);
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, outer * 0.12, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-
-    /* --------- OUTER RING (hugging the sunburst) --------- */
-
-    const ringGap = 0; // no space between sunburst and ring
-    const baseRingThickness = 30 * ringScale; // thickness of ring
-
-    const ringIn = outer + ringGap;              // starts right at sunburst edge
-    const ringOut = ringIn + baseRingThickness;  // extends outward by thickness
-
-    const wedgeA = (2 * Math.PI) / 10;
-
-    /* Background ring */
-    ctx.beginPath();
-    ctx.arc(cx, cy, ringOut, 0, Math.PI * 2);
-    ctx.arc(cx, cy, ringIn, Math.PI * 2, 0, true);
+    for (let i = 0; i < N; i++) {
+      const a = start + (i * 2 * Math.PI / N);
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
     ctx.closePath();
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = gradient;
     ctx.fill();
-
-    const full = Math.floor(overallVal);
-    const frac = overallVal - full;
-
-    function wedgeColor(i) {
-      return `hsl(220, 30%, ${70 - i * 4}%)`;
+    ctx.restore();
+  },
+  afterDatasetsDraw(chart) {
+    const opts = chart.config.options.customBackground;
+    if (!opts?.enabled) return;
+    const r = chart.scales.r, ctx = chart.ctx;
+    const cx = r.xCenter, cy = r.yCenter, radius = r.drawingArea;
+    const N = chart.data.labels.length, start = -Math.PI / 2;
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = start + (i * 2 * Math.PI / N);
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x, y);
     }
-
-    /* Full wedges */
-    for (let i = 0; i < full; i++) {
-      const a0 = -Math.PI / 2 + i * wedgeA;
-      const a1 = a0 + wedgeA;
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, ringOut, a0, a1);
-      ctx.arc(cx, cy, ringIn, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = wedgeColor(i);
-      ctx.fill();
+    ctx.strokeStyle = '#35727d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = start + (i * 2 * Math.PI / N);
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
-
-    /* Fractional wedge */
-    if (frac > 0) {
-      const i = full;
-      const a0 = -Math.PI / 2 + i * wedgeA;
-      const a1 = a0 + wedgeA * frac;
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, ringOut, a0, a1);
-      ctx.arc(cx, cy, ringIn, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = wedgeColor(i);
-      ctx.fill();
-    }
+    ctx.closePath();
+    ctx.strokeStyle = '#184046';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
   }
+};
 
-  /* --------------------------------------------- */
-  /* LIVE PREVIEW                                  */
-  /* --------------------------------------------- */
-  function updatePreview() {
-    const stats = getStats();
-    const ov = getOverall();
-    charLevel.value = computeLevel(stats, ov).toFixed(1);
-    drawChart(previewCtx, previewCanvas, stats, ov);
-  }
+const axisTitlesPlugin = {
+  id: 'axisTitles',
+  afterDraw(chart) {
+    const ctx = chart.ctx,
+      r = chart.scales.r,
+      labels = chart.data.labels;
+    if (!labels) return;
 
-  Object.values(statInputs).forEach(i => i.addEventListener("input", updatePreview));
-  overall.addEventListener("input", updatePreview);
+    const isPopup = chart.canvas.closest('#overlay') !== null;
+    const cx = r.xCenter,
+      cy = r.yCenter,
+      base = -Math.PI / 2,
+      baseRadius = r.drawingArea * 1.1;
 
-  updatePreview();
+    // 🔹 Use the first chart's ability color for all axis titles
+    const axisColor = getFirstAbilityColor();
 
-  /* --------------------------------------------- */
-  /* OPEN POPUP                                    */
-  /* --------------------------------------------- */
-  viewBtn.addEventListener("click", () => {
-    const stats = getStats();
-    const ov = getOverall();
-    const lvl = computeLevel(stats, ov);
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'italic 18px Candara';
+    ctx.strokeStyle = axisColor;   // <- was '#8747e6'
+    ctx.fillStyle = 'white';
+    ctx.lineWidth = 4;
 
-    charLevel.value = lvl.toFixed(1);
-    fileTypeGod.textContent = charGod.value;
+    labels.forEach((label, i) => {
+      const a = base + (i * 2 * Math.PI / labels.length);
+      const x = cx + baseRadius * Math.cos(a);
+      let y = cy + baseRadius * Math.sin(a);
 
-    modalImage.src = uploadedImage ? uploadedImage.src : "";
+      if (i === 0) y -= 5;
+      if (isPopup && (i === 1 || i === 4)) y -= 25;
 
-    modalInfo.innerHTML =
-      `<div><span class="label">Name:</span> ${charName.value || "Unknown"}</div>
-       <div><span class="label">Character ID:</span> ${getCharacterID()}</div>
-       <div><span class="label">Species:</span> ${charSpecies.value || "Unknown"}</div>
-       <div><span class="label">Ability:</span> ${charAbility.value || "Unknown"}</div>
-       <div><span class="label">Patron God:</span> ${charGod.value}</div>
-       <div><span class="label">Danger Level:</span> ${charDanger.value}</div>
-       <div><span class="label">Level Index:</span> ${lvl.toFixed(1)}</div>`;
-
-    drawChart(modalCtx, modalCanvas, stats, ov);
-
-    modal.classList.remove("hidden");
-  });
-
-  /* --------------------------------------------- */
-  /* CLOSE POPUP                                   */
-  /* --------------------------------------------- */
-  closeBtn.addEventListener("click", () => {
-    modal.classList.add("hidden");
-  });
-
-  /* --------------------------------------------- */
-  /* DOWNLOAD CHART                                */
-  /* --------------------------------------------- */
-  downloadBtn.addEventListener("click", () => {
-
-    const wrap = document.getElementById("modalWrapper");
-    const rect = wrap.getBoundingClientRect();
-
-    const tmp = document.createElement("canvas");
-    tmp.width = rect.width * 2;
-    tmp.height = rect.height * 2;
-
-    const tctx = tmp.getContext("2d");
-    tctx.scale(2, 2);
-
-    tctx.fillStyle = "#ffffff";
-    tctx.fillRect(0, 0, rect.width, rect.height);
-
-    /* Render image */
-    if (uploadedImage) {
-      tctx.drawImage(modalImage, 10, 10, 240, 300);
-    }
-
-    /* Render text */
-    tctx.fillStyle = "#000";
-    tctx.font = "18px Georgia";
-    let y = 330;
-    modalInfo.innerText.split("\n").forEach(line => {
-      tctx.fillText(line, 10, y);
-      y += 26;
+      ctx.strokeText(label, x, y);
+      ctx.fillText(label, x, y);
     });
 
-    /* Render chart */
-    tctx.drawImage(modalCanvas, 350, 10);
+    ctx.restore();
+  }
+};
 
-    /* Download */
-    const name = (charName.value || "character").replace(/\s+/g, "");
-    const link = document.createElement("a");
-    link.download = `${name}_mr_characterchart.png`;
-    link.href = tmp.toDataURL();
-    link.click();
+const globalValueLabelsPlugin = {
+  id: 'globalValueLabels',
+  afterDraw(chart) {
+    if (chart.canvas.closest('#overlay')) return;
+    const ctx = chart.ctx,
+      r = chart.scales.r,
+      labels = chart.data.labels,
+      cx = r.xCenter,
+      cy = r.yCenter,
+      base = -Math.PI / 2,
+      baseRadius = r.drawingArea * 1.1,
+      offset = 20;
+    const axes = labels.length;
+    const maxPerAxis = new Array(axes).fill(0);
+    charts.forEach(c => {
+      for (let i = 0; i < axes; i++)
+        maxPerAxis[i] = Math.max(maxPerAxis[i], c.stats[i] || 0);
+    });
+    ctx.save();
+    ctx.font = '15px Candara';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    labels.forEach((_, i) => {
+      const angle = base + (i * 2 * Math.PI / axes);
+      const x = cx + (baseRadius + offset) * Math.cos(angle);
+      let y = cy + (baseRadius + offset) * Math.sin(angle);
+      if (i === 0 || i === 1 || i === 4) y += 20;
+      const val = Math.round(maxPerAxis[i] * 100) / 100;
+      ctx.fillText(`(${val})`, x, y);
+    });
+    ctx.restore();
+  }
+};
+
+/*************************
+ * CHART CREATION
+ *************************/
+function makeRadar(ctx, color, withBackground = false) {
+  return new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Power', 'Speed', 'Trick', 'Recovery', 'Defense'],
+      datasets: [{
+        data: [0, 0, 0, 0, 0],
+        backgroundColor: hexToRGBA(color, FILL_ALPHA),
+        borderColor: color,
+        borderWidth: 2,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: color,
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      layout: { padding: { top: 25, bottom: 25, left: 10, right: 10 } },
+      scales: {
+        r: {
+          min: 0,
+          max: 10,
+          ticks: { display: false },
+          grid: { display: false },
+          angleLines: { color: '#6db5c0', lineWidth: 1 },
+          pointLabels: { color: 'transparent' }
+        }
+      },
+      customBackground: { enabled: withBackground },
+      plugins: { legend: { display: false } }
+    },
+    plugins: [axisTitlesPlugin, radarBackgroundPlugin, globalValueLabelsPlugin]
   });
+}
 
-});
+/* … the rest of your code (addChart, selectChart, refreshAll, popup, etc.) stays the same … */
