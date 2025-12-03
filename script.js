@@ -98,9 +98,9 @@ const axisTitlesPlugin = {
       labels = chart.data.labels;
     if (!labels) return;
 
-    const opts = chart.config.options.axisTitleColors || {};
-    const strokeColor = opts.strokeColor || '#8747e6'; // fallback
-    const fillColor = opts.fillColor || 'white';       // fallback
+    // 🔹 Use Chart 1's ability color (or BASE_COLOR if not available)
+    const firstColor =
+      (charts && charts.length > 0 && charts[0].color) ? charts[0].color : BASE_COLOR;
 
     const isPopup = chart.canvas.closest('#overlay') !== null;
     const cx = r.xCenter,
@@ -112,8 +112,8 @@ const axisTitlesPlugin = {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = 'italic 18px Candara';
-    ctx.strokeStyle = strokeColor;
-    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = firstColor; // was '#8747e6'
+    ctx.fillStyle = 'white';
     ctx.lineWidth = 4;
 
     labels.forEach((label, i) => {
@@ -197,10 +197,6 @@ function makeRadar(ctx, color, withBackground = false) {
         }
       },
       customBackground: { enabled: withBackground },
-      axisTitleColors: {
-        strokeColor: color,   // will be overridden to chart 1’s color in refreshAll()
-        fillColor: 'white'
-      },
       plugins: { legend: { display: false } }
     },
     plugins: [axisTitlesPlugin, radarBackgroundPlugin, globalValueLabelsPlugin]
@@ -301,25 +297,15 @@ function selectChart(index) {
  * UPDATE
  *************************/
 function refreshAll() {
-  // 🔹 Always use chart 1's ability color for axis titles
-  const firstColor = charts.length > 0 ? charts[0].color : BASE_COLOR;
-
   charts.forEach(obj => {
     const ds = obj.chart.data.datasets[0];
     const fill = obj.multi
       ? makeConicGradient(obj.chart, obj.axis, FILL_ALPHA)
       : hexToRGBA(obj.color, FILL_ALPHA);
-
     ds.data = obj.stats.map(v => Math.min(v, 10)); // cap at 10
     ds.borderColor = obj.color;
     ds.pointBorderColor = obj.color;
     ds.backgroundColor = fill;
-
-    // 🔹 Set axis title color for every chart = first chart color
-    obj.chart.options.axisTitleColors = obj.chart.options.axisTitleColors || {};
-    obj.chart.options.axisTitleColors.strokeColor = firstColor;
-    obj.chart.options.axisTitleColors.fillColor = 'white';
-
     obj.chart.update();
   });
 }
@@ -391,9 +377,6 @@ viewBtn.addEventListener('click', () => {
     pointRadius: 0
   }));
 
-  // 🔹 Use first chart’s color for popup axis titles as well
-  const firstChartColor = charts.length > 0 ? charts[0].color : BASE_COLOR;
-
   if (radarPopup) radarPopup.destroy();
   radarPopup = new Chart(ctx, {
     type: 'radar',
@@ -413,10 +396,6 @@ viewBtn.addEventListener('click', () => {
         }
       },
       customBackground: { enabled: true },
-      axisTitleColors: {
-        strokeColor: firstChartColor,
-        fillColor: 'white'
-      },
       plugins: { legend: { display: false } }
     },
     plugins: [radarBackgroundPlugin, axisTitlesPlugin]
